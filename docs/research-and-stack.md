@@ -1,158 +1,189 @@
-# Unified Email SaaS — Feasibility, Tech Stack & Build-vs-Buy Research
+# Unified Email — Scope, Stack & Auth Research
 
-Status: research / decision document
+Status: decided
 Date: 2026-08-22
+Scope: **single-user, self-hosted personal tool** (SaaS নয়)
 
 ---
 
-## 1. Short answer: হ্যাঁ, বানানো সম্ভব
+## 1. Scope
 
-Front / Missive / HubSpot Conversations-style একটা unified inbox বানানো technically
-solved problem. আসল কাজটা email protocol নয় — আসল কাজ তিনটা:
+শুধু আমার নিজের ব্যবহারের জন্য একটা unified email client। Local Docker, বা একটা
+ছোট VPS/cloud box-এ চলবে। কোনো customer নেই, কোনো signup নেই, কোনো billing নেই।
 
-1. **Provider compliance** (Google CASA + Microsoft publisher verification) — সবচেয়ে বড় blocker, code নয়।
-2. **Sync correctness** (delta sync, idempotency, threading, dedupe) — এখানেই বেশিরভাগ project ভাঙে।
-3. **Cost per connected mailbox** — এটাই ঠিক করে দেয় build vs buy.
+তিনটা account connect হবে:
 
-EmailEngine এই তিনটার মধ্যে ২ নম্বরটা প্রায় পুরোটা solve করে দেয়, ১ নম্বরটা করে না
-(ওটা আমাদের নিজের OAuth app-এর দায়), আর ৩ নম্বরে সবচেয়ে ভালো deal দেয়।
+| # | Account | Provider path |
+|---|---|---|
+| 1 | Google Workspace (নিজের domain) | **Gmail API** (Internal OAuth app) |
+| 2 | Personal `@gmail.com` | **IMAP/SMTP + App Password** |
+| 3 | Personal Outlook.com | **Microsoft Graph** (`/common` app registration) |
 
----
-
-## 2. Email layer: build vs buy
-
-| Option | Model | Pricing (2026) | Data ownership | Verdict |
-|---|---|---|---|---|
-| **EmailEngine** (Postal Systems) | Self-hosted email API, Node + Redis | **~$1,450 / €1,200 per year flat**, unlimited mailboxes + unlimited instances | 100% আমাদের infra-তে | ✅ **Recommended** |
-| Nylas | Managed unified API | ~$15/mo incl. 5 accounts, then ~$2/account/mo | Nylas-এর cloud | Compliance-heavy enterprise হলে |
-| Aurinko | Managed unified API | ~$1/account/mo | Aurinko cloud | সস্তা, কিন্তু vendor lock-in |
-| Unipile | Managed, email + LinkedIn/WhatsApp | €49/mo (10 accounts), then ~€5/account/mo | Unipile cloud | LinkedIn/WhatsApp দরকার হলে |
-| Raw Gmail API + Graph API নিজে লেখা | DIY | $0 license | আমাদের | ❌ 3-6 months extra dev, প্রতিটা edge case নিজে খেতে হবে |
-
-**Break-even:** per-account pricing-এ ~20-40টা mailbox-এর পরেই EmailEngine সস্তা হয়ে যায়।
-SaaS হিসেবে যদি ১০০+ customer target, তাহলে flat license ছাড়া unit economics কাজ করবে না।
-
-**তাই decision: EmailEngine, self-hosted.**
-
-কিন্তু একটা abstraction layer অবশ্যই রাখব (`MailboxProvider` interface) — যাতে কখনো
-EmailEngine থেকে সরতে হলে পুরো app rewrite করতে না হয়।
-
-### EmailEngine যা দেয়
-
-- IMAP/SMTP + **native Gmail API** (Pub/Sub push সহ) + **native Microsoft Graph**
-- OAuth2 app management (Google + Microsoft), token refresh নিজে handle করে
-- Webhooks: `messageNew`, `messageDeleted`, `messageUpdated` (flag change), `mailboxNew`, ইত্যাদি
-- REST: list/get/search messages, send (threading + Sent folder সহ), attachment download, flag update
-- Delta sync, retry queue, bounce detection, suppression list
-- Redis-কে database হিসেবে ব্যবহার করে (`noeviction` policy), **message body store করে না** — on demand fetch করে
-
-### যা দেয় না (আমাদের করতে হবে)
-
-- Multi-tenant user/team model, permissions
-- নিজের DB-তে message metadata persist (search + CRM linking-এর জন্য দরকার)
-- UI (inbox, thread view, composer)
-- Full-text search index
-- CRM entity matching
+এই scope-এ আগের SaaS plan-এর দুইটা বড় খরচ সম্পূর্ণ বাদ গেল: **EmailEngine license
+($1,450/yr)** আর **Google CASA assessment ($540+/yr, recurring)**। মোট license খরচ **$0**।
 
 ---
 
-## 3. Compliance — এটাই timeline-এর আসল risk
+## 2. Email layer: EmailEngine বাদ, direct API
 
-### Google (Gmail)
+EmailEngine-এর license **১৪ দিনের trial**, তারপর $1,450/yr — আর ওর মূল selling point
+("unlimited mailboxes, flat price") এখানে zero value, কারণ mailbox মাত্র ৩টা।
+৩টা account-এর জন্য একটা extra Node service + Redis instance + বার্ষিক license
+maintain করা pure overhead।
 
-- EmailEngine-এর Gmail API mode-এ দরকার `https://www.googleapis.com/auth/gmail.modify`
-  (+ Pub/Sub-এর জন্য একটা service account with `https://www.googleapis.com/auth/pubsub`)
-- `gmail.modify` একটা **restricted scope** → **CASA Tier 2 security assessment বাধ্যতামূলক**
-- 2026-এ self-serve CASA Tier 2 lab fee সাধারণত **$540 – $1,000** (legacy manual track অনেক বেশি ছিল)
-- Google-এর নিজের brand + scope review সহ total timeline **4–12+ সপ্তাহ**
-- **প্রতি বছর re-certification** লাগে; miss করলে production access revoke হতে পারে
-- লাগবে: public homepage, privacy policy (Limited Use disclosure সহ), demo video যেটা পুরো consent flow দেখায়
+**Decision: Laravel-এ সরাসরি provider API।**
 
-> **এর মানে:** Google verification প্রথম দিনেই শুরু করতে হবে, dev-এর শেষে নয়।
-> Verification pending থাকা অবস্থায় app "Testing" mode-এ ১০০ জন test user পর্যন্ত চলবে —
-> pilot customer দিয়ে শুরু করার জন্য সেটাই যথেষ্ট।
+| | Direct API (chosen) | EmailEngine |
+|---|---|---|
+| License | $0 | $1,450/yr trial-এর পরে |
+| Extra services | নেই | Node + আলাদা Redis |
+| Dev effort | ~২ সপ্তাহ বেশি | কম |
+| Control | সম্পূর্ণ | vendor-এর abstraction-এর মধ্যে |
+| ৩টা account-এ যুক্তিযুক্ত? | ✅ | ❌ |
 
-### Microsoft (Outlook / M365)
+PHP packages:
+- `google/apiclient` + `google/apiclient-services` — Gmail API
+- `microsoft/microsoft-graph` (official PHP SDK, v2) — Graph
+- `webklex/php-imap` — IMAP/SMTP, **IDLE ও OAuth support করে**, PHP `imap` extension লাগে না
+- `symfony/mime` — RFC822 message build/parse (Laravel-এর ভিতরেই আছে)
 
-- Scopes: `Mail.ReadWrite`, `Mail.Send`, `offline_access`, `User.Read` (delegated)
-- Multi-tenant app + **publisher verification** (Microsoft AI Cloud Partner Program ID লাগে, 1–5 business days)
-- Verification ছাড়া consent screen-এ "unverified publisher" warning দেখাবে — enterprise customer আটকে যাবে
-- Enterprise tenant-এ প্রায়ই **admin consent** লাগবে
-- ⚠️ **31 Dec 2026 থেকে**: delivered message-এর subject/body/recipients modify করতে হলে
-  elevated `Mail-Advanced.ReadWrite` লাগবে। আমাদের use case (read/send/reply/flag) এতে পড়ে না,
-  কিন্তু draft-editing feature বানালে খেয়াল রাখতে হবে।
-
-Google-এর তুলনায় Microsoft অনেক সহজ ও সস্তা → **Outlook দিয়ে ship করো আগে**, Gmail parallel-এ verify হোক।
+তবু `MailboxProvider` interface-টা রাখছি — কারণ এখন তিনটা আলাদা implementation লাগবে,
+abstraction-টা vendor-independence-এর জন্য নয়, **তিন provider-কে এক UI-তে আনার জন্য**।
 
 ---
 
-## 4. Recommended tech stack
+## 3. Auth — প্রতিটা account-এর আলাদা পথ, আলাদা কারণে
 
-### Backend
-- **PHP 8.3+ / Laravel 13** (latest major, March 2026) — API + jobs + web
-- **PostgreSQL 16+** — messages/threads metadata, tenants, CRM links (JSONB + full-text fallback)
-- **Redis 7** — দুইটা আলাদা instance:
-  - `redis-app`: Laravel cache/session/queue
-  - `redis-ee`: EmailEngine-এর নিজের store (`maxmemory-policy noeviction`, persistent, backup সহ)
-- **Laravel Horizon** — queue supervision; operation-ভিত্তিক আলাদা queue (`sync`, `send`, `index`, `webhook`)
-- **Laravel Reverb** (বা Soketi) — inbox-এ real-time new-mail push
-- **Meilisearch** — email full-text search (Laravel Scout driver; PG FTS দিয়ে শুরু করে পরে migrate করা যায়)
-- **S3-compatible object storage** (Cloudflare R2 / MinIO) — attachment cache
-- **EmailEngine** — email protocol layer
+### 3.1 Google Workspace → Gmail API, "Internal" OAuth app ⭐
 
-### Frontend
-- **Inertia.js + Vue 3 + TypeScript + Tailwind** — SPA-feel, কিন্তু Laravel-এর auth/routing রাখা যায়
-  (React পছন্দ হলে Inertia + React, একই architecture)
-- **TipTap** — rich-text composer (HTML email body)
-- অথবা internal/admin tooling দ্রুত লাগলে **Filament 4** panel
+নিজের domain Workspace-এ থাকায় OAuth consent screen **"Internal"** করা যায়। এতে:
 
-### Infra
-- Docker Compose (dev) → single VPS/Hetzner বা AWS ECS (prod)
-- EmailEngine একটা আলাদা service container, শুধু internal network-এ exposed
-- Webhook endpoint HMAC-signed, IP-allowlisted
+- ❌ verification লাগে **না** (CASA-ও না) — restricted scope নিয়েও
+- ❌ ৭ দিনের refresh-token expiry **নেই** (ওটা শুধু External + Testing-এর নিয়ম)
+- ❌ ১০০ test-user cap নেই
+- ✅ Gmail API-র সব কিছু, Pub/Sub push সহ
 
-### কেন এই choice
-- Laravel queue + Horizon জিনিসটা exactly এই workload-এর জন্য: বহু ছোট ছোট idempotent sync job
-- Postgres JSONB → provider-এর raw payload রাখা যায় schema না ভেঙে
-- Meilisearch সস্তা ও fast; Elasticsearch overkill যতক্ষণ না millions of messages
-- Reverb Laravel-native, আলাদা Node service maintain করতে হয় না
+Scopes: `gmail.modify` (read + flag + label), `gmail.send`, `gmail.labels`.
+
+> এটাই সবচেয়ে পরিষ্কার পথ। Setup: Google Cloud project → OAuth consent screen
+> = Internal → Desktop/Web client → refresh token একবার নিয়ে DB-তে encrypted রাখা।
+
+### 3.2 Personal @gmail.com → App Password + IMAP/SMTP
+
+Personal Gmail Workspace org-এর বাইরে, তাই Internal app ওটাকে authorize করতে পারবে না।
+বাকি দুইটা OAuth পথ দুইভাবেই খারাপ:
+
+- External + **Testing** mode → refresh token **৭ দিনে revoke** → প্রতি সপ্তাহে re-auth
+- External + **Production** + restricted scope → **CASA Tier 2** লাগবে, ~$540+/yr recurring
+
+**তাই App Password।** ২০২৬-এও কাজ করে — March 2025-এ শুধু *regular password* বন্ধ
+হয়েছে, 2FA-এর পরে generate করা 16-character app password ঠিকই চলে। কোনো OAuth app,
+verification, বা token expiry নেই।
+
+- Server: `imap.gmail.com:993` (SSL), `smtp.gmail.com:465` (SSL)
+- ⚠️ 2-Step Verification অবশ্যই on থাকতে হবে
+- ⚠️ Google account-এর main password বদলালে app password revoke হয়ে যায় → re-enter করতে হবে
+- Real-time: **IMAP IDLE** — outbound connection, কোনো public endpoint লাগে না, প্রায় instant
+
+### 3.3 Personal Outlook.com → Microsoft Graph
+
+- Basic auth ২০২২-এই মরেছে, তাই OAuth বাধ্যতামূলক — কিন্তু এটা সহজ
+- একটা **free personal Microsoft account** দিয়েই Entra app registration করা যায়
+- Supported account types: *"Accounts in any organizational directory and personal
+  Microsoft accounts"*, authority `/common` (বা শুধু personal হলে `/consumers`)
+- **Publisher verification লাগবে না** — নিজে একমাত্র user, শুধু প্রথমবার
+  "unverified publisher" screen-টা নিজে accept করে নেব
+- Graph API **free**; throttle 10,000 requests / 10 min per app per mailbox — একজনের জন্য বিপুল
+- Scopes (delegated): `Mail.ReadWrite`, `Mail.Send`, `offline_access`, `User.Read`
+
+⚠️ **Dec 31, 2026 থেকে** delivered message-এর subject/body/recipients modify করতে elevated
+`Mail-Advanced.ReadWrite` লাগবে। আমাদের read/send/reply/flag এতে পড়ে না — কিন্তু
+provider-side draft editing বানালে খেয়াল রাখতে হবে।
 
 ---
 
-## 5. খরচ (আনুমানিক, বছর ১)
+## 4. Real-time: polling + IDLE, webhook নয় ⭐
+
+Gmail Pub/Sub push আর Graph change notification — দুইটারই **public HTTPS endpoint**
+দরকার। Local Docker বা home server-এ চালাতে হলে Cloudflare Tunnel/ngrok maintain
+করতে হবে। আর একটা বড় বাধা: Graph-এ personal account-এর `/me/messages` subscription
+user token ছাড়া maintain করা **যায় না**, আর subscription-এর expiry অল্প (renew করতে হয়)।
+
+একজন user, ৩টা mailbox — polling-ই যথেষ্ট এবং অনেক কম moving parts:
+
+| Account | Mechanism | Latency |
+|---|---|---|
+| Workspace Gmail | `users.history.list` (stored `historyId`), প্রতি ৩০-৬০ সে. | ~৩০-৬০ সে. |
+| Personal Gmail | **IMAP IDLE** (long-lived outbound connection) | প্রায় instant |
+| Outlook.com | Graph `/messages/delta` (stored `deltaLink`), প্রতি ৩০-৬০ সে. | ~৩০-৬০ সে. |
+
+**কোনো public endpoint, tunnel, বা static IP লাগবে না।** পরে চাইলে Workspace account-এ
+Pub/Sub push যোগ করা যাবে — sync engine-এর ভিতরে সেটা শুধু আরেকটা trigger, নতুন pipeline নয়।
+
+Delta token চিরস্থায়ী নয় — Gmail `historyId` পুরোনো হলে 404 দেয়, Graph
+`syncStateNotFound` দেয়, IMAP-এ `UIDVALIDITY` বদলে যায়। তিনটা ক্ষেত্রেই fallback একটাই:
+**full re-sync**। এটা ধরে না রাখলে account চুপচাপ stale হয়ে যাবে — এটাই এই design-এর
+সবচেয়ে সহজে ভুল হওয়া জায়গা।
+
+---
+
+## 5. Stack
+
+| Layer | Choice | কেন |
+|---|---|---|
+| Backend | PHP 8.3+ / **Laravel 13** | latest major (Mar 2026) |
+| Runtime | **FrankenPHP** (Octane) | একটা container-এ web server + PHP |
+| DB | **PostgreSQL 16** | JSONB (raw payload) + `tsvector` FTS → আলাদা search engine লাগে না |
+| Queue | **Redis** + `queue:work` | Horizon optional; ৩টা account-এ overkill |
+| Search | **Postgres full-text** (`tsvector`) | Meilisearch বাদ — একজনের mailbox-এ প্রয়োজন নেই |
+| Frontend | **Inertia + Vue 3 + TS + Tailwind** | SPA feel, Laravel auth/routing রাখা যায় |
+| Composer UI | **TipTap** | HTML email body |
+| Attachments | **local volume** | S3 বাদ |
+| Live UI | polling (১৫ সে.) বা Reverb | polling দিয়ে শুরু, দরকার হলে Reverb |
+
+### SaaS plan থেকে যা বাদ গেল
+
+EmailEngine · আলাদা Redis instance · Meilisearch · S3/R2 · Reverb (v1-এ) ·
+multi-tenancy · row-level security · billing · CASA verification · webhook endpoint + HMAC ·
+tenant-scoped queues
+
+Container সংখ্যা ৬-৭ থেকে **৪**-এ নামল: `app`, `postgres`, `redis`, `worker`
+(+ IMAP IDLE-এর জন্য একটা long-running process)।
+
+---
+
+## 6. খরচ
 
 | Item | Cost |
 |---|---|
-| EmailEngine license | ~$1,450 / yr |
-| Google CASA Tier 2 (annual) | ~$540 – $1,000 / yr |
-| Microsoft Partner (MPN/PGA) | সাধারণত $0 – nominal |
-| Hosting (app + PG + 2×Redis + Meilisearch) | ~$60 – $200 / mo |
-| Object storage (attachments) | ~$5 – $30 / mo |
-| **Total year 1 (infra + license)** | **~$3,000 – $5,000** |
-
-Per-mailbox marginal cost প্রায় শূন্য → SaaS pricing-এ ভালো margin.
+| সব license (Gmail API, Graph, Laravel, Postgres) | **$0** |
+| Google CASA | **$0** (Internal app + App Password, তাই লাগে না) |
+| Microsoft publisher verification | **$0** (লাগে না) |
+| Local Docker-এ চালালে hosting | **$0** |
+| ছোট VPS-এ চালালে (2GB RAM যথেষ্ট) | ~$5–10 / mo |
 
 ---
 
-## 6. প্রধান risk
+## 7. Risk
 
 | Risk | Mitigation |
 |---|---|
-| Google verification আটকে যাওয়া / দেরি | Day 1-এ শুরু; Outlook দিয়ে launch; Gmail-এ IMAP+OAuth fallback path রাখা |
-| Redis data loss = sync state হারানো | AOF persistence + daily snapshot; state আমাদের PG-তেও mirror করা |
-| Webhook duplicate/out-of-order | `provider_message_id` unique constraint + idempotent upsert |
-| Provider rate limit | per-account throttled queue, exponential backoff |
-| EmailEngine vendor risk (single-vendor) | `MailboxProvider` interface abstraction; perpetual license option আছে |
-| Compliance: inbox content রাখা | metadata + preview default, full body opt-in/TTL; encryption at rest |
+| Delta/history token expire → silent stale | প্রতি provider-এ full-resync fallback + `last_synced_at` staleness alert |
+| App password revoke (Google password বদলালে) | `auth_error` status + UI-তে re-enter prompt |
+| IMAP IDLE connection মরে যাওয়া | supervised daemon, auto-reconnect, backoff, সাথে safety-net polling |
+| Token আমাদের DB-তে (EmailEngine আর রাখছে না) | Laravel encrypted casts, `.env` `APP_KEY` backup আলাদা রাখা, DB volume encrypted |
+| Duplicate message (retry/re-sync) | `(mail_account_id, provider_message_id)` unique + idempotent upsert |
+| একা maintainer | provider quirk-গুলো doc-এ লিখে রাখা; magic কম, boring code বেশি |
 
 ---
 
 ## Sources
 
-- [EmailEngine](https://emailengine.app/) · [docs](https://learn.emailengine.app/docs) · [licensing](https://learn.emailengine.app/docs/licensing) · [Gmail API scopes](https://learn.emailengine.app/docs/accounts/gmail/gmail-api-scopes) · [Gmail Pub/Sub](https://learn.emailengine.app/docs/accounts/gmail/gmail-pubsub)
-- [Google — Restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)
-- [Google CASA tiers & costs](https://deepstrike.io/blog/google-casa-security-assessment-2025)
-- [Microsoft Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) · [permissions overview](https://learn.microsoft.com/en-us/graph/permissions-overview)
+- [Google — restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) · [manage app audience / Internal vs External](https://support.google.com/cloud/answer/15549945?hl=en)
+- [Google OAuth refresh token 7-day rule](https://www.unipile.com/google-oauth-refresh-token/) · [moving Testing → Production](https://tech.queenofsandiego.com/posts/2026-05-06-2124.html)
+- [Gmail IMAP/SMTP + App Password (2026)](https://smtpedia.com/gmail-email-settings-pop3-imap-smtp/) · [Google: transition from less secure apps](https://support.google.com/a/answer/14114704?hl=en)
+- [Microsoft Graph OAuth for Outlook/M365](https://www.unipile.com/microsoft-graph-oauth-email/) · [Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) · [Graph throttling limits](https://learn.microsoft.com/en-us/graph/throttling-limits)
+- [Outlook change notifications](https://learn.microsoft.com/en-us/graph/outlook-change-notifications-overview) · [delta query overview](https://learn.microsoft.com/en-us/graph/delta-query-overview)
 - [Mail-Advanced.ReadWrite change (Dec 2026)](https://4sysops.com/archives/mail-advancedreadwrite-permissions-required-to-change-sensitive-email-properties-in-exchange-online-via-graph-api/)
-- [Nylas vs Unipile vs Aurinko vs EmailEngine comparison](https://stackreferee.com/email-api-infrastructure/nylas-vs-unipile-vs-aurinko-vs-nango-vs-emailengine) · [Unipile email API providers](https://www.unipile.com/email-api-providers/)
-- [Laravel 13 release notes](https://laravel.com/docs/13.x/releases)
+- [EmailEngine licensing](https://learn.emailengine.app/docs/licensing) · [EmailEngine license text](https://github.com/postalsys/emailengine/blob/master/LICENSE_EMAILENGINE.txt)
+- [webklex/php-imap](https://github.com/Webklex/laravel-imap) · [google-api-php-client](https://github.com/googleapis/google-api-php-client) · [microsoft/microsoft-graph](https://packagist.org/packages/microsoft/microsoft-graph) · [Laravel 13](https://laravel.com/docs/13.x/releases)
