@@ -8,7 +8,15 @@ import RelativeTime from '../../components/RelativeTime.vue'
 const props = defineProps({
     thread: { type: Object, required: true },
     messages: { type: Array, required: true },
+    pending: { type: Array, default: () => [] },
 })
+
+const pendingLabels = {
+    draft: 'Unsent draft',
+    queued: 'Queued to send',
+    sending: 'Sending',
+    failed: 'Send failed',
+}
 
 // Collapse everything but the last message, the way a mail client does.
 const expanded = ref(new Set(props.messages.length ? [props.messages[props.messages.length - 1].id] : []))
@@ -27,6 +35,17 @@ function flag(message, changes) {
 // enable tracking pixels in the rest of the conversation.
 function showImages(message) {
     router.get(`/threads/${props.thread.id}`, { show_images: message.id }, { preserveScroll: true })
+}
+
+// Reply-all is only meaningful when there is somebody else on the message.
+function replyActions(message) {
+    const actions = [{ type: 'reply', label: 'Reply' }]
+
+    if (message.to.length + message.cc.length > 1) {
+        actions.push({ type: 'reply_all', label: 'Reply all' })
+    }
+
+    return [...actions, { type: 'forward', label: 'Forward' }]
 }
 
 function name(address) {
@@ -55,6 +74,34 @@ function size(bytes) {
                 {{ thread.message_count }} messages
             </p>
         </div>
+
+        <ul v-if="pending.length" class="divide-y divide-stone-200 dark:divide-stone-800">
+            <li
+                v-for="outbound in pending"
+                :key="outbound.id"
+                class="flex items-baseline gap-2 px-4 py-2.5 text-sm"
+                :class="outbound.status === 'failed'
+                    ? 'bg-red-50 dark:bg-red-950/40'
+                    : 'bg-amber-50 dark:bg-amber-950/30'"
+            >
+                <span class="font-medium">{{ pendingLabels[outbound.status] ?? outbound.status }}</span>
+
+                <span class="min-w-0 flex-1 truncate text-stone-500 dark:text-stone-400">
+                    to {{ outbound.to.map((a) => a.address).join(', ') || '(no recipient)' }}
+                    <template v-if="outbound.error"> — {{ outbound.error }}</template>
+                    <template v-else-if="outbound.attempts > 1">
+                        — retrying, attempt {{ outbound.attempts }}
+                    </template>
+                </span>
+
+                <Link
+                    :href="`/compose/${outbound.id}`"
+                    class="shrink-0 text-xs text-sky-600 hover:underline dark:text-sky-400"
+                >
+                    {{ outbound.status === 'failed' ? 'Fix and retry' : 'Open' }}
+                </Link>
+            </li>
+        </ul>
 
         <div class="divide-y divide-stone-200 dark:divide-stone-800">
             <article v-for="message in messages" :key="message.id" class="px-4 py-3">
@@ -130,6 +177,17 @@ function size(bytes) {
                     <p v-else-if="!message.has_body" class="text-sm text-stone-400 italic">
                         Body not downloaded yet.
                     </p>
+
+                    <div class="mt-4 flex gap-2">
+                        <Link
+                            v-for="action in replyActions(message)"
+                            :key="action.type"
+                            :href="`/compose?type=${action.type}&message=${message.id}`"
+                            class="rounded-md border border-stone-300 px-2.5 py-1 text-xs transition hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
+                        >
+                            {{ action.label }}
+                        </Link>
+                    </div>
 
                     <ul v-if="message.attachments.length" class="mt-4 flex flex-wrap gap-2">
                         <li

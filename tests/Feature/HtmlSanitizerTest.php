@@ -134,6 +134,38 @@ class HtmlSanitizerTest extends TestCase
         }
     }
 
+    public function test_a_quoted_body_drops_remote_images_entirely(): void
+    {
+        // Blocking is right for reading, but a quote is about to be mailed onward and
+        // there is no reason for the recipients' copy to carry the sender's tracker.
+        $html = $this->sanitizer->sanitizeForQuoting(
+            '<p>Hi</p><img src="https://tracker.test/p.gif"><img src="cid:logo">',
+        );
+
+        $this->assertStringNotContainsString('tracker.test', $html);
+        $this->assertStringNotContainsString('data-blocked-src', $html);
+        $this->assertStringContainsString('cid:logo', $html, 'inline attachments still belong in the quote');
+        $this->assertStringContainsString('Hi', $html);
+    }
+
+    public function test_quoting_strips_every_remote_image_not_just_the_first(): void
+    {
+        // Removing nodes mutates a live DOMNodeList, which silently skips elements
+        // when iterated directly.
+        $html = $this->sanitizer->sanitizeForQuoting(
+            '<img src="https://a.test/1.gif"><img src="https://b.test/2.gif"><img src="https://c.test/3.gif">',
+        );
+
+        $this->assertStringNotContainsString('<img', $html);
+    }
+
+    public function test_quoting_still_removes_scripts(): void
+    {
+        $html = $this->sanitizer->sanitizeForQuoting('<p>Hi</p><script>alert(1)</script>');
+
+        $this->assertStringNotContainsString('script', $html);
+    }
+
     public function test_plain_text_bodies_are_escaped_not_rendered(): void
     {
         $html = $this->sanitizer->fromText("Hello <script>alert(1)</script>\nSecond line");

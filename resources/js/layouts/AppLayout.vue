@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import ProviderBadge from '../components/ProviderBadge.vue'
 
@@ -10,6 +10,12 @@ const filters = computed(() => page.props.filters ?? {})
 
 // Silent staleness is this app's characteristic failure, so it gets a banner
 // rather than only a log line.
+const flash = computed(() => page.props.flash?.message ?? null)
+const dismissed = ref(null)
+
+// Re-show on a new message even if the last one was dismissed.
+watch(flash, () => (dismissed.value = null))
+
 const stale = computed(() => accounts.value.filter((a) => a.is_stale))
 const broken = computed(() => accounts.value.filter((a) => a.status === 'auth_error'))
 const backfilling = computed(() => accounts.value.filter((a) => a.backfilling))
@@ -32,7 +38,14 @@ function go(params) {
         <aside
             class="hidden w-60 shrink-0 flex-col border-r border-stone-200 bg-white px-3 py-4 md:flex dark:border-stone-800 dark:bg-stone-900"
         >
-            <Link href="/inbox" class="mb-5 px-2 text-sm font-semibold tracking-tight">Unified Email</Link>
+            <Link href="/inbox" class="mb-4 px-2 text-sm font-semibold tracking-tight">Unified Email</Link>
+
+            <Link
+                href="/compose"
+                class="mb-4 rounded-md bg-stone-900 px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            >
+                Compose
+            </Link>
 
             <nav class="space-y-0.5">
                 <button
@@ -107,6 +120,20 @@ function go(params) {
         </aside>
 
         <main class="min-w-0 flex-1">
+            <div
+                v-if="flash && flash !== dismissed"
+                class="flex items-center gap-2 border-b border-stone-200 bg-stone-100 px-4 py-2 text-sm dark:border-stone-800 dark:bg-stone-800"
+            >
+                <span>{{ flash }}</span>
+                <button
+                    type="button"
+                    class="ml-auto text-xs text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                    @click="dismissed = flash"
+                >
+                    Dismiss
+                </button>
+            </div>
+
             <div v-if="broken.length" class="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
                 <span class="font-medium">Reconnect needed.</span>
                 {{ broken.map((a) => a.email).join(', ') }} rejected our credentials — a revoked token, or a

@@ -91,17 +91,19 @@ php artisan schedule:work    # প্রতি মিনিটে delta poll
 
 ## Status
 
-**১০৮টা test pass** (আসল Postgres 16-এ), UI browser-এ চালিয়ে যাচাই করা।
+**১৫৬টা test pass** (আসল Postgres 16-এ), UI browser-এ চালিয়ে যাচাই করা।
 
 দাঁড়িয়ে গেছে — schema, `MailboxProvider` contract + DTO, `ThreadResolver`
 (cross-account thread merge সহ), `MessageWriter` (idempotent upsert, Gmail label
 sync, derived thread counts), backfill/sync/flag-push job orchestration
 (overlap lock, cursor expiry → full resync, auth error handling), HTML sanitizer
-(XSS + tracking-pixel blocking), staleness watchdog, আর পুরো inbox UI (unified
-list, thread view, full-text search, flag toggle)।
+(XSS + tracking-pixel blocking), staleness watchdog, পুরো inbox UI (unified list,
+thread view, full-text search, flag toggle), আর send pipeline — recipient
+resolution, RFC 5322 build, quoting, draft autosave, attachment staging আর TipTap
+composer।
 
-বাকি — provider-দের আসল protocol call, OAuth connect flow, send/reply/forward,
-IDLE daemon, attachment download। [`docs/architecture.md`](docs/architecture.md)-এ
+বাকি — provider-দের আসল protocol call, OAuth connect flow, IDLE daemon,
+incoming attachment download। [`docs/architecture.md`](docs/architecture.md)-এ
 বিস্তারিত। যে method এখনো implement হয়নি সেটা exception ছোড়ে, খালি data ফেরত দেয় না।
 
 UI দেখতে credential লাগবে না:

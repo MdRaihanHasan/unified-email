@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OutboundStatus;
 use App\Mail\Support\HtmlSanitizer;
 use App\Models\MailAccount;
+use App\Models\OutboundMessage;
 use App\Models\Thread;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -69,7 +71,30 @@ class InboxController
 
         $thread->load(['messages' => fn ($query) => $query->orderBy('received_at'), 'messages.attachments', 'messages.mailAccount']);
 
+        // Anything we tried to send on this thread but that has not landed yet. A
+        // send can spend minutes in retry backoff, and without this the user clicks
+        // Send, sees nothing, and has no way to tell success from silent failure.
+        $pending = OutboundMessage::query()
+            ->where('thread_id', $thread->id)
+            ->whereIn('status', [
+                OutboundStatus::Draft,
+                OutboundStatus::Queued,
+                OutboundStatus::Sending,
+                OutboundStatus::Failed,
+            ])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (OutboundMessage $outbound) => [
+                'id' => $outbound->id,
+                'status' => $outbound->status->value,
+                'subject' => $outbound->subject,
+                'to' => $outbound->to_addrs ?? [],
+                'attempts' => $outbound->attempts,
+                'error' => $outbound->error,
+            ]);
+
         return Inertia::render('Inbox/Show', [
+            'pending' => $pending,
             'thread' => [
                 'id' => $thread->id,
                 'subject' => $thread->subject ?: '(no subject)',

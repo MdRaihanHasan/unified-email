@@ -67,6 +67,25 @@ class HtmlSanitizer
         return $this->blockRemoteImages($clean);
     }
 
+    /**
+     * Sanitise a body that is about to be quoted into outgoing mail.
+     *
+     * Remote images are removed outright rather than parked on a data attribute.
+     * Parking is right for reading — the UI can offer to load them — but a quote is
+     * about to be mailed to other people, and there is no reason for their copy to
+     * carry the original sender's tracker URL at all.
+     */
+    public function sanitizeForQuoting(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        $clean = $this->restoreContentIds(Purifier::clean($this->parkContentIds($html), self::CONFIG));
+
+        return $clean === '' ? '' : $this->stripRemoteImages($clean);
+    }
+
     /** Plain-text fallback for messages that carry no HTML part. */
     public function fromText(?string $text): string
     {
@@ -100,6 +119,35 @@ class HtmlSanitizer
      */
     private function blockRemoteImages(string $html): array
     {
+        $blocked = 0;
+
+        $result = $this->rewriteRemoteImages($html, function (DOMElement $image, string $source) use (&$blocked) {
+            $image->removeAttribute('src');
+            $image->setAttribute('data-blocked-src', $source);
+            $blocked++;
+        });
+
+        return ['html' => $result, 'blocked_images' => $blocked];
+    }
+
+    private function stripRemoteImages(string $html): string
+    {
+        return $this->rewriteRemoteImages(
+            $html,
+            fn (DOMElement $image) => $image->parentNode?->removeChild($image),
+        );
+    }
+
+    /**
+     * Walk every remote <img> and hand it to $handle.
+     *
+     * cid: is skipped throughout: it refers to an attachment on this message rather
+     * than a third-party host, so it leaks nothing.
+     *
+     * @param  callable(DOMElement, string): void  $handle
+     */
+    private function rewriteRemoteImages(string $html, callable $handle): string
+    {
         $document = new DOMDocument;
         $previous = libxml_use_internal_errors(true);
 
@@ -112,29 +160,24 @@ class HtmlSanitizer
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
-        $blocked = 0;
+        // Snapshot the list first: removing nodes mutates a live DOMNodeList and
+        // silently skips elements mid-iteration.
+        $images = iterator_to_array($document->getElementsByTagName('img'));
 
-        foreach ($document->getElementsByTagName('img') as $image) {
+        foreach ($images as $image) {
             /** @var DOMElement $image */
             $source = $image->getAttribute('src');
 
-            // cid: refers to an attachment on this message, not a third party, so
-            // it leaks nothing and stays.
             if ($source === '' || str_starts_with(strtolower($source), 'cid:')) {
                 continue;
             }
 
-            $image->removeAttribute('src');
-            $image->setAttribute('data-blocked-src', $source);
-            $blocked++;
+            $handle($image, $source);
         }
 
         $root = $document->getElementById('email-root');
 
-        return [
-            'html' => $root === null ? $html : $this->innerHtml($document, $root),
-            'blocked_images' => $blocked,
-        ];
+        return $root === null ? $html : $this->innerHtml($document, $root);
     }
 
     private function innerHtml(DOMDocument $document, DOMElement $element): string

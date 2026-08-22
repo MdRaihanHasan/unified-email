@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ComposeController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\MessageFlagController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,14 @@ Route::middleware('auth')->group(function () {
     Route::get('threads/{thread}', [InboxController::class, 'show'])->name('threads.show');
 
     Route::patch('messages/{message}/flags', [MessageFlagController::class, 'update'])->name('messages.flags');
+
+    Route::get('compose', [ComposeController::class, 'create'])->name('compose');
+    Route::post('compose', [ComposeController::class, 'store'])->name('compose.store');
+    Route::post('compose/attach', [ComposeController::class, 'attach'])->name('compose.attach');
+    Route::get('compose/{outbound}', [ComposeController::class, 'edit'])->name('compose.edit');
+    Route::patch('compose/{outbound}', [ComposeController::class, 'update'])->name('compose.update');
+    Route::post('compose/{outbound}/send', [ComposeController::class, 'send'])->name('compose.send');
+    Route::delete('compose/{outbound}', [ComposeController::class, 'destroy'])->name('compose.destroy');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts');
 

@@ -242,8 +242,31 @@ Provider-ভিত্তিক খুঁটিনাটি:
 - **Graph**: reply-এ `POST /me/messages/{id}/createReply` → body বসিয়ে `send`;
   এতে Graph নিজেই header ঠিক করে। নতুন mail-এ `POST /me/sendMail`
 - Forward: original-এর `body_html` quote করে + attachment re-attach
-- Draft আমাদের DB-তে প্রতি ৩ সেকেন্ডে auto-save (provider draft sync করছি না — একজনের
-  জন্য অপ্রয়োজনীয় complexity)
+- Draft আমাদের DB-তে auto-save (provider draft sync করছি না — একজনের জন্য
+  অপ্রয়োজনীয় complexity)
+
+### যা implement করার সময় বেরিয়ে এল
+
+- **Recipient হিসাব ভুল হলে লজ্জাজনক, loud নয়** — নিজেকে mail করা, reply-all-এ অর্ধেক
+  thread বাদ পড়া, no-reply-তে reply যাওয়া। তাই `RecipientResolver`: Reply-To আগে,
+  তারপর From; **সব** connected account-এর address বাদ (শুধু sending account নয় —
+  নইলে Workspace থেকে reply করলে personal account CC হয়ে যায়); reply-all-এ To-তে
+  থাকা কেউ আবার Cc-তে যায় না; আর **Bcc কখনো carry হয় না** (sender ইচ্ছে করে
+  লুকিয়েছিল)।
+- **Message-ID আমরা নিজে generate করি**, transport-কে দিই না — কারণ Sent copy
+  sync-এ ফেরত আসে আর ওটাই মেলানোর একমাত্র সূত্র। Retry-তে **একই** id reuse হয়,
+  নইলে duplicate delivery recipient-এর কাছে দুইটা আলাদা email হয়ে যায়।
+- **Symfony-র RFC compliance check-এ অনেক আসল Message-ID fail করে।** পুরোনো mail-এর
+  odd id-র কারণে reply পাঠাতে না পারা ভুল trade — তাই `addIdHeader` fail করলে
+  plain text header-এ fallback।
+- **Quote-এ remote image পুরোপুরি মুছে ফেলা হয়**, শুধু block নয়। পড়ার সময় block করা
+  ঠিক (UI load করার সুযোগ দেয়), কিন্তু quote অন্যদের কাছে যাচ্ছে — তাদের copy-তে
+  original sender-এর tracker URL থাকার কোনো কারণ নেই।
+- **Reply-এ caret quote-এর উপরে বসাতে হয়** (`autofocus: 'start'`)। নইলে টাইপ করা
+  লেখা sender-এর নিজের বাক্যের মাঝখানে ঢুকে যায় — browser-এ চালিয়ে ধরা পড়েছিল।
+- **Retry backoff-এ send মিনিটের পর মিনিট চুপচাপ বসে থাকে।** তাই thread view-তে
+  pending/failed outbound দেখানো হয় — নইলে Send চেপে user জানতেই পারবে না সফল হলো
+  নাকি নীরবে ব্যর্থ।
 
 ---
 
@@ -317,7 +340,7 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 
 ### এখন পর্যন্ত কী দাঁড়িয়েছে
 
-**১০৮টা test pass** (আসল Postgres 16-এ), browser-এ চালিয়েও verify করা।
+**১৫৬টা test pass** (আসল Postgres 16-এ), browser-এ চালিয়েও verify করা।
 
 | জিনিস | অবস্থা |
 |---|---|
@@ -333,14 +356,18 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 | `FullResyncJob` — cursor + folder progress reset, mail delete না করে | ✅ tested |
 | `HtmlSanitizer` — XSS strip, remote image block, `cid:` round-trip | ✅ tested |
 | Inbox UI — unified list, thread view, search, flag toggle, staleness banner | ✅ browser-verified |
+| `RecipientResolver` — reply/reply-all, Reply-To precedence, own addresses excluded | ✅ tested |
+| `MimeBuilder` — RFC 5322 build, threading headers, non-compliant id fallback | ✅ tested |
+| `QuoteBuilder` — reply attribution, forward header block, tracker stripped | ✅ tested |
+| `SendMessageJob` — status transitions, Message-ID reuse on retry, no double send | ✅ tested |
+| Composer UI — TipTap, address chips, attachment staging, draft autosave | ✅ browser-verified |
 | `mail:sync`, `mail:watchdog`, `mail:user`, scheduler | ✅ চলে |
 | Credentials encryption at rest | ✅ tested |
 | তিন adapter-এর client bootstrap | ✅ wired |
 | **তিন adapter-এর আসল protocol call** | ⏳ credential লাগবে |
 | **OAuth connect flow** (Google + Microsoft callback) | ⏳ |
-| **Send / reply / forward** (`SendMessageJob`, composer UI) | ⏳ |
 | **`mail:idle` daemon body** | ⏳ |
-| Attachment download endpoint | ⏳ |
+| Attachment download endpoint (incoming mail) | ⏳ |
 
 যেসব method এখনো implement হয়নি সেগুলো নীরবে খালি data ফেরত দেয় না — স্পষ্ট
 exception ছোড়ে ("not implemented yet, roadmap Phase N")। খালি array ফেরত দিলে সেটা
