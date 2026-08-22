@@ -315,29 +315,49 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 
 মোট ~৭-৮ সপ্তাহ part-time।
 
-### Phase 0-এ কী দাঁড়িয়েছে
+### এখন পর্যন্ত কী দাঁড়িয়েছে
 
-সব verified — ৩৭টা test pass, migration আসল Postgres 16-এ চলেছে।
+**১০৮টা test pass** (আসল Postgres 16-এ), browser-এ চালিয়েও verify করা।
 
 | জিনিস | অবস্থা |
 |---|---|
 | Laravel 13.26 + FrankenPHP Dockerfile + ৬-service compose stack | ✅ |
-| পুরো schema (৮টা migration), tsvector generated column + GIN index সহ | ✅ চলে |
-| `MailboxProvider` contract + ১২টা normalized DTO | ✅ |
+| পুরো schema (৯টা migration), tsvector generated column + GIN index | ✅ চলে |
+| `MailboxProvider` contract + normalized DTO | ✅ |
 | `ThreadResolver` — তিন tier, cross-account merge সহ | ✅ tested |
-| `ReplyHeaders` — `Re:`/`Fwd:` prefix, References chain trim | ✅ tested |
-| `SyncAccountJob` — overlap lock, cursor handling, `CursorInvalidException` → full resync | ✅ |
-| `FullResyncJob` — cursor reset, message delete না করে upsert-এ ভরসা | ✅ |
-| `mail:sync`, `mail:watchdog`, scheduler wiring | ✅ চলে |
+| `ReplyHeaders` — prefix stacking, References chain trim | ✅ tested |
+| `MessageWriter` — idempotent upsert, thread recount, Gmail label sync | ✅ tested |
+| `SyncAccountJob` — overlap lock, cursor expiry → full resync, auth error | ✅ tested |
+| `BackfillJob` — resumable per-folder walk, cursor-before-first-page, All Mail skip | ✅ tested |
+| `PushFlagsJob` — optimistic push, fail হলে local revert | ✅ tested |
+| `FullResyncJob` — cursor + folder progress reset, mail delete না করে | ✅ tested |
+| `HtmlSanitizer` — XSS strip, remote image block, `cid:` round-trip | ✅ tested |
+| Inbox UI — unified list, thread view, search, flag toggle, staleness banner | ✅ browser-verified |
+| `mail:sync`, `mail:watchdog`, `mail:user`, scheduler | ✅ চলে |
 | Credentials encryption at rest | ✅ tested |
-| তিন adapter-এর client bootstrap (Gmail/Graph/IMAP) | ✅ wired |
-| তিন adapter-এর আসল protocol call | ⏳ Phase 1-2 |
-| `BackfillJob`, `SendMessageJob`, `PushFlagsJob`, `mail:idle` body | ⏳ Phase 1-3 |
-| UI (Inertia/Vue) | ⏳ Phase 1 |
+| তিন adapter-এর client bootstrap | ✅ wired |
+| **তিন adapter-এর আসল protocol call** | ⏳ credential লাগবে |
+| **OAuth connect flow** (Google + Microsoft callback) | ⏳ |
+| **Send / reply / forward** (`SendMessageJob`, composer UI) | ⏳ |
+| **`mail:idle` daemon body** | ⏳ |
+| Attachment download endpoint | ⏳ |
 
 যেসব method এখনো implement হয়নি সেগুলো নীরবে খালি data ফেরত দেয় না — স্পষ্ট
 exception ছোড়ে ("not implemented yet, roadmap Phase N")। খালি array ফেরত দিলে সেটা
 কাজ করা sync-এর মতো দেখাবে, যেটা এই design-এ সবচেয়ে বিপজ্জনক failure।
+
+### Credential ছাড়া কীভাবে test হলো
+
+`tests/Support/FakeProvider.php` — in-memory `MailboxProvider`। প্রতিটা test নিজে
+scripted folder/page/changeset বসায়, তাই পুরো pipeline (backfill → thread stitching
+→ flag push → cursor expiry → full resync) network ছাড়াই চালানো যায়।
+
+UI দেখতে `DemoSeeder` আছে — MessageWriter দিয়েই sample mail বসায়, তাই real sync-এর
+একই threading ও folder logic দিয়ে যায়:
+
+```bash
+php artisan db:seed --class=DemoSeeder   # demo@example.com / password
+```
 
 ---
 

@@ -61,6 +61,12 @@ docker compose exec app php artisan migrate
 # http://localhost:8000
 ```
 
+Login বানাতে (registration route নেই — single user):
+
+```bash
+docker compose exec app php artisan mail:user
+```
+
 IMAP account যোগ করার পরে IDLE daemon চালু করতে:
 
 ```bash
@@ -85,15 +91,25 @@ php artisan schedule:work    # প্রতি মিনিটে delta poll
 
 ## Status
 
-**Phase 0 (foundations) সম্পূর্ণ** — ৩৭টা test pass, migration আসল Postgres 16-এ যাচাই করা।
+**১০৮টা test pass** (আসল Postgres 16-এ), UI browser-এ চালিয়ে যাচাই করা।
 
-দাঁড়িয়ে গেছে: schema, `MailboxProvider` contract + normalized DTO, তিন provider
-adapter-এর client bootstrap, `ThreadResolver` (তিন tier, cross-account merge সহ),
-`ReplyHeaders`, sync job orchestration (overlap lock + cursor expiry → full resync),
-staleness watchdog, Docker stack।
+দাঁড়িয়ে গেছে — schema, `MailboxProvider` contract + DTO, `ThreadResolver`
+(cross-account thread merge সহ), `MessageWriter` (idempotent upsert, Gmail label
+sync, derived thread counts), backfill/sync/flag-push job orchestration
+(overlap lock, cursor expiry → full resync, auth error handling), HTML sanitizer
+(XSS + tracking-pixel blocking), staleness watchdog, আর পুরো inbox UI (unified
+list, thread view, full-text search, flag toggle)।
 
-বাকি: provider-দের আসল protocol call, backfill, send, IDLE daemon, UI —
-[`docs/architecture.md`](docs/architecture.md)-এর roadmap দেখো। যে method এখনো
-implement হয়নি সেটা exception ছোড়ে, খালি data ফেরত দেয় না।
+বাকি — provider-দের আসল protocol call, OAuth connect flow, send/reply/forward,
+IDLE daemon, attachment download। [`docs/architecture.md`](docs/architecture.md)-এ
+বিস্তারিত। যে method এখনো implement হয়নি সেটা exception ছোড়ে, খালি data ফেরত দেয় না।
 
-পরের ধাপ: **Phase 1** — Graph adapter দিয়ে Outlook read-only end-to-end।
+UI দেখতে credential লাগবে না:
+
+```bash
+php artisan db:seed --class=DemoSeeder   # demo@example.com / password
+```
+
+পরের ধাপ: **Graph adapter + Microsoft OAuth callback** — Outlook read-only
+end-to-end। এর জন্য Entra app registration লাগবে
+([`docs/provider-setup.md`](docs/provider-setup.md))।

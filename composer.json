@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.3",
         "google/apiclient": "^2.19",
+        "inertiajs/inertia-laravel": "^3.3",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "mews/purifier": "^3.4",
