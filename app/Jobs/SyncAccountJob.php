@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Mail\Data\SyncCursor;
 use App\Mail\Exceptions\AuthenticationFailedException;
 use App\Mail\Exceptions\CursorInvalidException;
+use App\Mail\Support\MessageWriter;
 use App\Models\MailAccount;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -37,7 +38,7 @@ class SyncAccountJob implements ShouldQueue
         return [(new WithoutOverlapping((string) $this->account->id))->dontRelease()->expireAfter(600)];
     }
 
-    public function handle(): void
+    public function handle(MessageWriter $writer): void
     {
         $account = $this->account->fresh();
 
@@ -87,13 +88,18 @@ class SyncAccountJob implements ShouldQueue
             return;
         }
 
-        // TODO Phase 1: persist $changes through MessageWriter (upsert on
-        // (mail_account_id, provider_message_id), resolve thread, sync folders/flags).
+        $applied = $writer->applyChangeSet($account, $changes);
 
+        // Advance the cursor only after the changes it describes are durably stored.
+        // The other order loses a whole window of mail if persistence throws.
         $account->update([
             'sync_cursor' => $changes->cursor?->toArray() ?? $cursor->toArray(),
             'last_synced_at' => now(),
             'last_error' => null,
         ]);
+
+        if (! $changes->isEmpty()) {
+            Log::info('Synced account', ['account' => $account->email, ...$applied]);
+        }
     }
 }

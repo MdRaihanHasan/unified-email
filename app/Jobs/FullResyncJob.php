@@ -27,6 +27,13 @@ class FullResyncJob implements ShouldQueue
             'backfill_done_at' => null,
         ]);
 
+        // Folder-level progress has to go too, or the walk resumes from wherever the
+        // last one stopped and never revisits what it already passed.
+        $this->account->folders()->update([
+            'backfill_cursor' => null,
+            'backfill_done_at' => null,
+        ]);
+
         BackfillJob::dispatch($this->account);
     }
 }
