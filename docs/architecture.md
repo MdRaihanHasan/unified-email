@@ -303,7 +303,7 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 
 | Phase | Scope | Estimate |
 |---|---|---|
-| **0 — Foundations** | Laravel 13 + FrankenPHP + compose stack, auth, migrations, `MailboxProvider` contract, Google Cloud project (Internal consent screen) + Entra app registration, App Password generate | ৩–৫ দিন |
+| **0 — Foundations** ✅ | Laravel 13 + FrankenPHP + compose stack, schema, `MailboxProvider` contract + তিন adapter, thread resolver, reply headers, sync job orchestration, watchdog | **done** |
 | **1 — Read one account** | `GraphProvider` আগে (সবচেয়ে সহজ auth) — connect, backfill, folder list, message list, thread view, body render + sanitize, read/unread, star | ১–১.৫ সপ্তাহ |
 | **2 — বাকি দুই provider** | `GmailApiProvider` (Internal OAuth + historyId delta), `ImapProvider` (App Password + IDLE daemon), unified inbox, cross-account threading, full-resync fallback, staleness watchdog | ২ সপ্তাহ |
 | **3 — Send** | composer (TipTap), send/reply/reply-all/forward তিন provider-এ, header building, attachment upload/download, draft auto-save | ১.৫ সপ্তাহ |
@@ -314,6 +314,30 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 দ্রুত দাঁড়াবে; তারপর বাকি দুইটা adapter সেই pipeline-এ বসবে।
 
 মোট ~৭-৮ সপ্তাহ part-time।
+
+### Phase 0-এ কী দাঁড়িয়েছে
+
+সব verified — ৩৭টা test pass, migration আসল Postgres 16-এ চলেছে।
+
+| জিনিস | অবস্থা |
+|---|---|
+| Laravel 13.26 + FrankenPHP Dockerfile + ৬-service compose stack | ✅ |
+| পুরো schema (৮টা migration), tsvector generated column + GIN index সহ | ✅ চলে |
+| `MailboxProvider` contract + ১২টা normalized DTO | ✅ |
+| `ThreadResolver` — তিন tier, cross-account merge সহ | ✅ tested |
+| `ReplyHeaders` — `Re:`/`Fwd:` prefix, References chain trim | ✅ tested |
+| `SyncAccountJob` — overlap lock, cursor handling, `CursorInvalidException` → full resync | ✅ |
+| `FullResyncJob` — cursor reset, message delete না করে upsert-এ ভরসা | ✅ |
+| `mail:sync`, `mail:watchdog`, scheduler wiring | ✅ চলে |
+| Credentials encryption at rest | ✅ tested |
+| তিন adapter-এর client bootstrap (Gmail/Graph/IMAP) | ✅ wired |
+| তিন adapter-এর আসল protocol call | ⏳ Phase 1-2 |
+| `BackfillJob`, `SendMessageJob`, `PushFlagsJob`, `mail:idle` body | ⏳ Phase 1-3 |
+| UI (Inertia/Vue) | ⏳ Phase 1 |
+
+যেসব method এখনো implement হয়নি সেগুলো নীরবে খালি data ফেরত দেয় না — স্পষ্ট
+exception ছোড়ে ("not implemented yet, roadmap Phase N")। খালি array ফেরত দিলে সেটা
+কাজ করা sync-এর মতো দেখাবে, যেটা এই design-এ সবচেয়ে বিপজ্জনক failure।
 
 ---
 

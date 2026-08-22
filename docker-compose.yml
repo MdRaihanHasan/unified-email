@@ -1,0 +1,97 @@
+# Everything runs on one host, and every outbound connection is ours: Gmail API,
+# smtp/imap.gmail.com and graph.microsoft.com. Nothing needs to reach in, so no
+# port has to be published beyond the app itself, and there is no tunnel or static
+# IP anywhere in the deployment.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    # Bind to localhost only. On a VPS, reach it over Tailscale or a reverse proxy
+    # rather than exposing a personal mailbox to the internet.
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:80"
+    env_file: .env
+    volumes:
+      - attachments:/app/storage/app/attachments
+      - ./storage/logs:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Backfill pages, body fetches, sends, flag pushes.
+  worker:
+    build: .
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=600 --sleep=1
+    env_file: .env
+    volumes:
+      - attachments:/app/storage/app/attachments
+      - ./storage/logs:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Drives the every-minute delta polls for the Gmail API and Graph accounts.
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file: .env
+    volumes:
+      - ./storage/logs:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Holds an IMAP IDLE connection open for the personal Gmail account. Needs an
+  # account to exist first, so it is behind a profile:
+  #   docker compose --profile idle up -d
+  imap-idle:
+    build: .
+    restart: unless-stopped
+    profiles: ["idle"]
+    command: php artisan mail:idle ${IDLE_ACCOUNT}
+    env_file: .env
+    volumes:
+      - ./storage/logs:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-unified_email}
+      POSTGRES_USER: ${DB_USERNAME:-unified}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-unified} -d ${DB_DATABASE:-unified_email}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Queue only — no mail is cached here, so appendonly is convenience, not safety.
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+  attachments:

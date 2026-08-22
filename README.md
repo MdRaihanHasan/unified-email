@@ -48,8 +48,52 @@ scope-এ অপ্রয়োজনীয় — কারণ ব্যাখ�
 - [`docs/provider-setup.md`](docs/provider-setup.md) — তিনটা account-এর credential
   setup-এর ধাপে ধাপে guide + checklist
 
+- [`docs/deployment.md`](docs/deployment.md) — কোথায় deploy করা যাবে (আর কেন Vercel-এ
+  যাবে না), VPS/local/PaaS-এর তুলনা
+
+## Quick start
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+# http://localhost:8000
+```
+
+IMAP account যোগ করার পরে IDLE daemon চালু করতে:
+
+```bash
+# .env-এ IDLE_ACCOUNT=you@gmail.com দিয়ে
+docker compose --profile idle up -d
+```
+
+Docker ছাড়া local dev (Postgres 16 + Redis নিজে চালু থাকলে):
+
+```bash
+composer install && cp .env.example .env
+php artisan key:generate && php artisan migrate
+php artisan test
+php artisan serve            # web
+php artisan queue:work       # worker
+php artisan schedule:work    # প্রতি মিনিটে delta poll
+```
+
+> Test-গুলো Postgres-এ চলে, SQLite-এ নয় — schema-তে generated `tsvector` column,
+> GIN index আর `jsonb` আছে, যেগুলো SQLite বানাতে পারে না। `unified_email_test`
+> database লাগবে।
+
 ## Status
 
-Design সম্পূর্ণ, application code এখনো শুরু হয়নি। পরের ধাপ: Phase 0 (Laravel skeleton
-+ Docker Compose + `MailboxProvider` contract), তারপর Phase 1 (Outlook read-only
-end-to-end)।
+**Phase 0 (foundations) সম্পূর্ণ** — ৩৭টা test pass, migration আসল Postgres 16-এ যাচাই করা।
+
+দাঁড়িয়ে গেছে: schema, `MailboxProvider` contract + normalized DTO, তিন provider
+adapter-এর client bootstrap, `ThreadResolver` (তিন tier, cross-account merge সহ),
+`ReplyHeaders`, sync job orchestration (overlap lock + cursor expiry → full resync),
+staleness watchdog, Docker stack।
+
+বাকি: provider-দের আসল protocol call, backfill, send, IDLE daemon, UI —
+[`docs/architecture.md`](docs/architecture.md)-এর roadmap দেখো। যে method এখনো
+implement হয়নি সেটা exception ছোড়ে, খালি data ফেরত দেয় না।
+
+পরের ধাপ: **Phase 1** — Graph adapter দিয়ে Outlook read-only end-to-end।
