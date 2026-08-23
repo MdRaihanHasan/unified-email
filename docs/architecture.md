@@ -340,7 +340,7 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 
 ### এখন পর্যন্ত কী দাঁড়িয়েছে
 
-**১৫৬টা test pass** (আসল Postgres 16-এ), browser-এ চালিয়েও verify করা।
+**১৭২টা test pass** (আসল Postgres 16-এ), Chromium-এ desktop + phone দুইভাবেই verify করা।
 
 | জিনিস | অবস্থা |
 |---|---|
@@ -361,6 +361,11 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 | `QuoteBuilder` — reply attribution, forward header block, tracker stripped | ✅ tested |
 | `SendMessageJob` — status transitions, Message-ID reuse on retry, no double send | ✅ tested |
 | Composer UI — TipTap, address chips, attachment staging, draft autosave | ✅ browser-verified |
+| Split-pane inbox — এক screen, `/threads/{id}` deep link হিসেবে টেকে | ✅ browser-verified |
+| তিন লাইনের row, hover action, multi-select + bulk action | ✅ tested |
+| Inline reply (thread-এর ভিতরে) + floating composer | ✅ browser-verified |
+| Keyboard navigation `j/k/o/u/x/s/r/c/?` + light/dark toggle | ✅ browser-verified |
+| Phone — drawer, compose button, single-pane navigation | ✅ browser-verified |
 | `mail:sync`, `mail:watchdog`, `mail:user`, scheduler | ✅ চলে |
 | Credentials encryption at rest | ✅ tested |
 | তিন adapter-এর client bootstrap | ✅ wired |
@@ -372,6 +377,21 @@ Dev-এ `sail`/compose, prod-এ একই compose file একটা VPS-এ।
 যেসব method এখনো implement হয়নি সেগুলো নীরবে খালি data ফেরত দেয় না — স্পষ্ট
 exception ছোড়ে ("not implemented yet, roadmap Phase N")। খালি array ফেরত দিলে সেটা
 কাজ করা sync-এর মতো দেখাবে, যেটা এই design-এ সবচেয়ে বিপজ্জনক failure।
+
+### UI-তে যা browser চালিয়ে ধরা পড়েছে, assertion-এ নয়
+
+- **এক লাইনের list row কাজ করে না** — ২৭rem pane-এ প্রতিটা subject তিন শব্দে কাটা
+  যায়, snippet-এর জায়গাই থাকে না। তাই তিন লাইন।
+- **`participants`-এ শুধু address আছে**, নাম নেই — কারণ thread matching address
+  মেলায়। তাই list-এর "who" column message-এর `from_addr` থেকে নাম নেয়, নইলে
+  "anna", "ops" দেখায়।
+- **Immediate watcher নিচে declare করা ref ছুঁলে** temporal dead zone-এ throw করে —
+  thread খুললেই প্রতিবার।
+- **Editor-এ caret থাকলে Escape কাজ করত না** — অথচ ঠিক তখনই মানুষ Escape চাপে।
+  Global handler টাইপ করার সময় key ignore করে, যেটা `j/k`-র জন্য ঠিক, Escape-এর
+  জন্য ভুল।
+- **ফোনে drawer বন্ধ করার উপায় ছিল না** — ৩৯০px পর্দায় ৩০৪px drawer, আর ফোনে
+  Escape key নেই।
 
 ### Credential ছাড়া কীভাবে test হলো
 

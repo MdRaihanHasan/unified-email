@@ -91,7 +91,7 @@ php artisan schedule:work    # প্রতি মিনিটে delta poll
 
 ## Status
 
-**১৫৬টা test pass** (আসল Postgres 16-এ), UI browser-এ চালিয়ে যাচাই করা।
+**১৭২টা test pass** (আসল Postgres 16-এ), UI Chromium-এ ১৪৪০px আর ৩৯০px দুইভাবেই চালিয়ে যাচাই করা।
 
 দাঁড়িয়ে গেছে — schema, `MailboxProvider` contract + DTO, `ThreadResolver`
 (cross-account thread merge সহ), `MessageWriter` (idempotent upsert, Gmail label
@@ -101,6 +101,12 @@ sync, derived thread counts), backfill/sync/flag-push job orchestration
 thread view, full-text search, flag toggle), আর send pipeline — recipient
 resolution, RFC 5322 build, quoting, draft autosave, attachment staging আর TipTap
 composer।
+
+UI split-pane — list আর thread এক পর্দায়, তিন লাইনের row, hover action,
+multi-select + bulk action, thread-এর ভিতরে inline reply, নতুন mail-এর জন্য
+floating composer, keyboard navigation (`j/k/o/u/x/s/r/c/?`), light/dark toggle,
+আর ফোনের জন্য drawer + compose button। Design source আর mockup
+[`.design/`](.design/)-এ।
 
 বাকি — provider-দের আসল protocol call, OAuth connect flow, IDLE daemon,
 incoming attachment download। [`docs/architecture.md`](docs/architecture.md)-এ
