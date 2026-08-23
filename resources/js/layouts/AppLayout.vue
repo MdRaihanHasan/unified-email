@@ -1,158 +1,215 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import ProviderBadge from '../components/ProviderBadge.vue'
+import Icon from '../components/Icon.vue'
+import IconButton from '../components/IconButton.vue'
+import Avatar from '../components/Avatar.vue'
+import NavContent from '../components/NavContent.vue'
+import { useTheme } from '../composables/useTheme'
 
 const page = usePage()
+const { toggleTheme } = useTheme()
 
 const accounts = computed(() => page.props.accounts ?? [])
 const filters = computed(() => page.props.filters ?? {})
+const user = computed(() => page.props.auth?.user)
 
 // Silent staleness is this app's characteristic failure, so it gets a banner
 // rather than only a log line.
-const flash = computed(() => page.props.flash?.message ?? null)
-const dismissed = ref(null)
-
-// Re-show on a new message even if the last one was dismissed.
-watch(flash, () => (dismissed.value = null))
-
-const stale = computed(() => accounts.value.filter((a) => a.is_stale))
 const broken = computed(() => accounts.value.filter((a) => a.status === 'auth_error'))
+const stale = computed(() => accounts.value.filter((a) => a.is_stale))
 const backfilling = computed(() => accounts.value.filter((a) => a.backfilling))
 
-const views = [
-    { key: 'inbox', label: 'Inbox' },
-    { key: 'unread', label: 'Unread' },
-    { key: 'starred', label: 'Starred' },
-    { key: 'sent', label: 'Sent' },
-    { key: 'all', label: 'All mail' },
-]
+const flash = computed(() => page.props.flash?.message ?? null)
+const dismissed = ref(null)
+watch(flash, () => (dismissed.value = null))
 
-function go(params) {
-    router.get('/inbox', { ...filters.value, ...params }, { preserveState: true, preserveScroll: true })
+const drawer = ref(false)
+const search = ref(filters.value.q ?? '')
+const searchInput = ref(null)
+
+watch(() => filters.value.q, (value) => (search.value = value ?? ''))
+
+let debounce = null
+watch(search, (value) => {
+    clearTimeout(debounce)
+    debounce = setTimeout(() => {
+        if ((filters.value.q ?? '') === value) return
+
+        router.get('/inbox', {
+            ...filters.value,
+            q: value || undefined,
+            thread: undefined,
+            page: undefined,
+        }, { preserveState: true, preserveScroll: true, replace: true })
+    }, 300)
+})
+
+function focusSearch() {
+    searchInput.value?.focus()
+    searchInput.value?.select()
 }
+
+// "/" focuses search from anywhere, the way every mail client does — but not while
+// the caret is already in a field, or it eats the character.
+function onKey(event) {
+    const tag = event.target?.tagName
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable
+
+    if (event.key === '/' && !typing && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault()
+        focusSearch()
+    }
+
+    if (event.key === 'Escape') {
+        drawer.value = false
+        if (tag === 'INPUT') event.target.blur()
+    }
+}
+
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKey)
+    clearTimeout(debounce)
+})
+
+defineExpose({ focusSearch })
 </script>
 
 <template>
-    <div class="flex min-h-screen">
-        <aside
-            class="hidden w-60 shrink-0 flex-col border-r border-stone-200 bg-white px-3 py-4 md:flex dark:border-stone-800 dark:bg-stone-900"
+    <div class="flex h-screen flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
+        <header
+            class="flex h-14 shrink-0 items-center gap-2 border-b border-stone-200 bg-white px-2 sm:gap-3 sm:px-3 dark:border-stone-800 dark:bg-stone-900"
         >
-            <Link href="/inbox" class="mb-4 px-2 text-sm font-semibold tracking-tight">Unified Email</Link>
-
-            <Link
-                href="/compose"
-                class="mb-4 rounded-md bg-stone-900 px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            <button
+                type="button"
+                class="flex size-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 md:hidden dark:text-stone-400 dark:hover:bg-stone-800"
+                aria-label="Open menu"
+                @click="drawer = true"
             >
-                Compose
+                <Icon name="menu" :size="22" />
+            </button>
+
+            <Link href="/inbox" class="hidden shrink-0 items-baseline gap-1.5 pl-1.5 md:flex" style="width: 13rem">
+                <span class="text-[0.95rem] font-semibold tracking-tight">Unified</span>
+                <span class="text-[0.95rem] text-stone-400">mail</span>
             </Link>
 
-            <nav class="space-y-0.5">
-                <button
-                    v-for="view in views"
-                    :key="view.key"
-                    type="button"
-                    class="w-full rounded px-2 py-1.5 text-left text-sm transition"
-                    :class="
-                        filters.view === view.key
-                            ? 'bg-stone-100 font-medium dark:bg-stone-800'
-                            : 'text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800/60'
-                    "
-                    @click="go({ view: view.key, page: undefined })"
-                >
-                    {{ view.label }}
-                </button>
-            </nav>
-
-            <p class="mt-6 mb-1.5 px-2 text-[0.65rem] font-medium tracking-wider text-stone-400 uppercase">
-                Accounts
-            </p>
-
-            <div class="space-y-0.5">
-                <button
-                    type="button"
-                    class="w-full rounded px-2 py-1.5 text-left text-sm transition"
-                    :class="
-                        !filters.account
-                            ? 'bg-stone-100 font-medium dark:bg-stone-800'
-                            : 'text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800/60'
-                    "
-                    @click="go({ account: undefined, page: undefined })"
-                >
-                    All accounts
-                </button>
-
-                <button
-                    v-for="account in accounts"
-                    :key="account.id"
-                    type="button"
-                    class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm transition"
-                    :class="
-                        filters.account === account.id
-                            ? 'bg-stone-100 font-medium dark:bg-stone-800'
-                            : 'text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800/60'
-                    "
-                    @click="go({ account: account.id, page: undefined })"
-                >
-                    <span class="truncate">{{ account.label }}</span>
-                    <ProviderBadge :provider="account.provider" />
-                </button>
-
-                <p v-if="!accounts.length" class="px-2 py-1.5 text-sm text-stone-400">No accounts yet</p>
-            </div>
-
-            <div class="mt-auto space-y-1 pt-4">
-                <Link
-                    href="/accounts"
-                    class="block rounded px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800/60"
-                >
-                    Settings
-                </Link>
-                <Link
-                    href="/logout"
-                    method="post"
-                    as="button"
-                    class="block w-full rounded px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800/60"
-                >
-                    Sign out
-                </Link>
-            </div>
-        </aside>
-
-        <main class="min-w-0 flex-1">
-            <div
-                v-if="flash && flash !== dismissed"
-                class="flex items-center gap-2 border-b border-stone-200 bg-stone-100 px-4 py-2 text-sm dark:border-stone-800 dark:bg-stone-800"
+            <label
+                class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-stone-100 px-3.5 transition focus-within:ring-1 focus-within:ring-sky-500 sm:max-w-2xl dark:bg-stone-800"
             >
-                <span>{{ flash }}</span>
-                <button
-                    type="button"
-                    class="ml-auto text-xs text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
-                    @click="dismissed = flash"
+                <Icon name="search" :size="19" class="text-stone-500 dark:text-stone-400" />
+                <input
+                    ref="searchInput"
+                    v-model="search"
+                    type="search"
+                    placeholder="Search all mailboxes"
+                    class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-400"
+                />
+                <kbd
+                    v-if="!search"
+                    class="hidden rounded border border-stone-300 px-1.5 text-xs text-stone-400 sm:block dark:border-stone-600"
+                >/</kbd>
+            </label>
+
+            <div class="ml-auto flex shrink-0 items-center gap-0.5">
+                <IconButton name="refresh" label="Sync now" :size="19" class="hidden sm:flex" />
+                <IconButton name="moon" label="Light / dark" :size="19" @click="toggleTheme" />
+                <Avatar :name="user?.name ?? '?'" :size="30" class="ml-1" />
+            </div>
+        </header>
+
+        <div class="flex min-h-0 flex-1">
+            <aside
+                class="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-stone-200 bg-white py-3 pr-2 md:flex dark:border-stone-800 dark:bg-stone-900"
+            >
+                <NavContent />
+                <div class="flex items-center gap-2 px-3 pt-3 text-xs text-stone-400">
+                    <Icon name="check" :size="14" />
+                    <span v-if="accounts.length">
+                        Synced {{ accounts[0].last_synced_for_humans ?? 'never' }}
+                    </span>
+                    <span v-else>Nothing connected</span>
+                </div>
+            </aside>
+
+            <div class="flex min-w-0 flex-1 flex-col">
+                <div
+                    v-if="broken.length"
+                    class="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
                 >
-                    Dismiss
-                </button>
-            </div>
+                    <span class="font-medium">Reconnect needed.</span>
+                    {{ broken.map((a) => a.email).join(', ') }} rejected our credentials — a revoked token, or
+                    a Google app password invalidated by a password change.
+                </div>
 
-            <div v-if="broken.length" class="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
-                <span class="font-medium">Reconnect needed.</span>
-                {{ broken.map((a) => a.email).join(', ') }} rejected our credentials — a revoked token, or a
-                Google app password invalidated by a password change.
-            </div>
+                <div
+                    v-else-if="stale.length"
+                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                >
+                    <span class="font-medium">Sync is behind.</span>
+                    <span v-for="account in stale" :key="account.id" class="ml-1">
+                        {{ account.email }} last synced {{ account.last_synced_for_humans ?? 'never' }}.
+                    </span>
+                </div>
 
-            <div v-else-if="stale.length" class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                <span class="font-medium">Sync is behind.</span>
-                <span v-for="account in stale" :key="account.id" class="ml-1">
-                    {{ account.email }} last synced {{ account.last_synced_for_humans ?? 'never' }}.
-                </span>
-            </div>
+                <div
+                    v-if="backfilling.length"
+                    class="shrink-0 border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
+                >
+                    Still importing history for {{ backfilling.map((a) => a.email).join(', ') }} — older mail
+                    will keep appearing.
+                </div>
 
-            <div v-if="backfilling.length" class="border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200">
-                Still importing history for {{ backfilling.map((a) => a.email).join(', ') }} — older mail will keep
-                appearing.
-            </div>
+                <div
+                    v-if="flash && flash !== dismissed"
+                    class="flex shrink-0 items-center gap-2 border-b border-stone-200 bg-stone-100 px-4 py-2 text-sm dark:border-stone-800 dark:bg-stone-800"
+                >
+                    <span>{{ flash }}</span>
+                    <button
+                        type="button"
+                        class="ml-auto text-xs text-stone-500 transition hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                        @click="dismissed = flash"
+                    >
+                        Dismiss
+                    </button>
+                </div>
 
-            <slot />
-        </main>
+                <slot />
+            </div>
+        </div>
+
+        <!-- Phone navigation. Without this the sidebar simply vanishes below md and
+             takes compose, the view switcher and the account switcher with it. -->
+        <Transition
+            enter-active-class="transition duration-200" leave-active-class="transition duration-150"
+            enter-from-class="opacity-0" leave-to-class="opacity-0"
+        >
+            <div v-if="drawer" class="fixed inset-0 z-40 bg-black/45 md:hidden" @click="drawer = false" />
+        </Transition>
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out" leave-active-class="transition duration-150 ease-in"
+            enter-from-class="-translate-x-full" leave-to-class="-translate-x-full"
+        >
+            <aside
+                v-if="drawer"
+                class="fixed inset-y-0 left-0 z-50 flex w-[17rem] flex-col overflow-y-auto bg-white py-4 pr-2 shadow-xl md:hidden dark:bg-stone-900"
+            >
+                <div class="mb-3 flex items-center gap-1.5 pr-2 pl-4">
+                    <span class="text-lg font-semibold tracking-tight">Unified</span>
+                    <span class="text-lg text-stone-400">mail</span>
+                    <button
+                        type="button"
+                        class="ml-auto flex size-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                        aria-label="Close menu"
+                        @click="drawer = false"
+                    >
+                        <Icon name="close" :size="20" />
+                    </button>
+                </div>
+                <NavContent :dense="false" @navigate="drawer = false" />
+            </aside>
+        </Transition>
     </div>
 </template>

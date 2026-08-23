@@ -1,136 +1,290 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '../../layouts/AppLayout.vue'
-import ProviderBadge from '../../components/ProviderBadge.vue'
-import RelativeTime from '../../components/RelativeTime.vue'
+import ThreadRow from '../../components/ThreadRow.vue'
+import ThreadPane from '../../components/ThreadPane.vue'
+import FloatingComposer from '../../components/FloatingComposer.vue'
+import Icon from '../../components/Icon.vue'
+import IconButton from '../../components/IconButton.vue'
+import ShortcutHelp from '../../components/ShortcutHelp.vue'
 
 const props = defineProps({
     threads: { type: Object, required: true },
     filters: { type: Object, required: true },
+    open: { type: Object, default: null },
 })
 
-const search = ref(props.filters.q ?? '')
-let debounce = null
+const rows = computed(() => props.threads.data)
 
-watch(search, (value) => {
-    clearTimeout(debounce)
-    debounce = setTimeout(() => {
-        router.get(
-            '/inbox',
-            { ...props.filters, q: value || undefined, page: undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        )
-    }, 300)
+const checked = ref(new Set())
+const cursor = ref(-1)
+const composing = ref(false)
+const help = ref(false)
+const pane = ref(null)
+
+// A new list is a new selection; keeping ticks across a filter change would act on
+// threads no longer on screen.
+watch(() => props.threads.data.map((t) => t.id).join(','), () => {
+    checked.value = new Set()
+    cursor.value = props.open ? rows.value.findIndex((t) => t.id === props.open.thread.id) : -1
 })
 
-// Our own addresses are already filtered out server-side; a thread with nothing
-// left is one we only ever sent to ourselves.
-function people(participants) {
-    if (!participants.length) return 'me'
+watch(() => props.open?.thread.id, (id) => {
+    if (id) cursor.value = rows.value.findIndex((t) => t.id === id)
+})
 
-    const names = participants.slice(0, 2).map((address) => address.split('@')[0])
-
-    return participants.length > 2 ? `${names.join(', ')} +${participants.length - 2}` : names.join(', ')
+function openThread(thread) {
+    router.get('/inbox', { ...props.filters, thread: thread.id }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['open', 'filters', 'threads', 'counts', 'flash'],
+    })
 }
+
+function closeThread() {
+    router.get('/inbox', { ...props.filters, thread: undefined }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['open', 'filters'],
+    })
+}
+
+function toggleCheck(thread) {
+    const next = new Set(checked.value)
+    next.has(thread.id) ? next.delete(thread.id) : next.add(thread.id)
+    checked.value = next
+}
+
+function checkAll() {
+    checked.value = checked.value.size === rows.value.length
+        ? new Set()
+        : new Set(rows.value.map((t) => t.id))
+}
+
+function bulk(action) {
+    if (!checked.value.size) return
+
+    router.post('/threads/actions', { thread_ids: [...checked.value], action }, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => (checked.value = new Set()),
+    })
+}
+
+function star(thread) {
+    router.post('/threads/actions', {
+        thread_ids: [thread.id],
+        action: thread.is_starred ? 'unstar' : 'star',
+    }, { preserveScroll: true, preserveState: true })
+}
+
+function markRead(thread, read) {
+    router.post('/threads/actions', {
+        thread_ids: [thread.id],
+        action: read ? 'read' : 'unread',
+    }, { preserveScroll: true, preserveState: true })
+}
+
+// ---- keyboard -----------------------------------------------------------
+// The thing that matters most day to day, and the reason a reading pane is worth
+// having: you can walk a mailbox without reaching for the mouse.
+function move(delta) {
+    if (!rows.value.length) return
+
+    cursor.value = Math.max(0, Math.min(rows.value.length - 1, cursor.value + delta))
+
+    const thread = rows.value[cursor.value]
+    document.getElementById(`thread-${thread.id}`)?.scrollIntoView({ block: 'nearest' })
+
+    // Walking the list moves the reading pane with it, which is the whole point.
+    if (props.open) openThread(thread)
+}
+
+function onKey(event) {
+    const tag = event.target?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
+    if (event.metaKey || event.ctrlKey || event.altKey) return
+
+    if (event.key === '?') {
+        event.preventDefault()
+        help.value = !help.value
+
+        return
+    }
+
+    if (event.key === 'Escape') {
+        if (help.value) return (help.value = false)
+        if (composing.value) return (composing.value = false)
+        if (checked.value.size) return (checked.value = new Set())
+        if (props.open) closeThread()
+
+        return
+    }
+
+    const at = () => rows.value[cursor.value] ?? null
+
+    switch (event.key) {
+        case 'j': event.preventDefault(); move(1); break
+        case 'k': event.preventDefault(); move(-1); break
+        case 'Enter':
+        case 'o': {
+            const thread = at()
+            if (thread) { event.preventDefault(); openThread(thread) }
+            break
+        }
+        case 'u': if (props.open) { event.preventDefault(); closeThread() } break
+        case 'x': {
+            const thread = at()
+            if (thread) { event.preventDefault(); toggleCheck(thread) }
+            break
+        }
+        case 's': {
+            const thread = at()
+            if (thread) { event.preventDefault(); star(thread) }
+            break
+        }
+        case 'c': event.preventDefault(); composing.value = true; break
+        case 'r': if (props.open) { event.preventDefault(); pane.value?.replyToLast() } break
+    }
+}
+
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => window.removeEventListener('keydown', onKey))
+
+const title = computed(() => {
+    if (props.filters.q) return `Search: ${props.filters.q}`
+
+    return { inbox: 'Inbox', unread: 'Unread', starred: 'Starred', sent: 'Sent', all: 'All mail' }[props.filters.view]
+})
 </script>
 
 <template>
-    <Head :title="filters.view === 'inbox' ? 'Inbox' : filters.view" />
+    <Head :title="title" />
 
     <AppLayout>
-        <div class="border-b border-stone-200 px-4 py-3 dark:border-stone-800">
-            <input
-                v-model="search"
-                type="search"
-                placeholder="Search mail — try from:someone invoice"
-                class="w-full max-w-md rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-stone-700 dark:bg-stone-900"
-            />
-        </div>
-
-        <ul v-if="threads.data.length" class="divide-y divide-stone-200 dark:divide-stone-800">
-            <li v-for="thread in threads.data" :key="thread.id">
-                <Link
-                    :href="`/threads/${thread.id}`"
-                    class="flex items-baseline gap-3 px-4 py-2.5 transition hover:bg-stone-100/70 dark:hover:bg-stone-800/50"
-                    :class="thread.unread_count ? 'bg-white dark:bg-stone-900/40' : ''"
+        <div class="flex min-h-0 flex-1">
+            <!-- On a phone the list gives way to the thread rather than sitting beside it. -->
+            <section
+                class="min-h-0 min-w-0 flex-col border-r border-stone-200 lg:flex lg:w-[27rem] lg:shrink-0 dark:border-stone-800"
+                :class="props.open ? 'hidden' : 'flex flex-1'"
+            >
+                <div
+                    class="flex h-11 shrink-0 items-center gap-0.5 border-b border-stone-200 pr-2 pl-3.5 dark:border-stone-800"
+                    :class="checked.size ? 'bg-sky-50 dark:bg-sky-950/60' : ''"
                 >
-                    <span
-                        class="mt-1.5 size-1.5 shrink-0 rounded-full"
-                        :class="thread.unread_count ? 'bg-sky-500' : 'bg-transparent'"
-                        :title="thread.unread_count ? `${thread.unread_count} unread` : ''"
-                    />
-
-                    <span
-                        class="w-40 shrink-0 truncate text-sm"
-                        :class="thread.unread_count ? 'font-semibold' : 'text-stone-600 dark:text-stone-400'"
+                    <button
+                        type="button"
+                        class="mr-2 flex size-4 shrink-0 items-center justify-center rounded-[3px] border-[1.6px] transition"
+                        :class="checked.size
+                            ? 'border-sky-600 bg-sky-600 text-white dark:border-sky-500 dark:bg-sky-500'
+                            : 'border-stone-400 dark:border-stone-500'"
+                        :aria-label="checked.size ? 'Clear selection' : 'Select all'"
+                        @click="checkAll"
                     >
-                        {{ people(thread.participants) }}
-                    </span>
+                        <Icon v-if="checked.size" name="check" :size="11" />
+                    </button>
 
-                    <span class="min-w-0 flex-1 truncate text-sm">
-                        <span :class="thread.unread_count ? 'font-semibold' : ''">{{ thread.subject }}</span>
-                        <span v-if="thread.message_count > 1" class="ml-1 text-xs text-stone-400">
-                            ({{ thread.message_count }})
+                    <template v-if="checked.size">
+                        <IconButton name="mailopen" label="Mark read" :size="18" @click="bulk('read')" />
+                        <IconButton name="inbox" label="Mark unread" :size="18" @click="bulk('unread')" />
+                        <IconButton name="star" label="Star" :size="18" @click="bulk('star')" />
+                        <IconButton name="star" label="Unstar" :size="18" filled @click="bulk('unstar')" />
+                        <span class="ml-auto text-xs font-semibold text-sky-700 dark:text-sky-300">
+                            {{ checked.size }} selected
                         </span>
-                        <span v-if="thread.snippet" class="ml-2 text-stone-400">— {{ thread.snippet }}</span>
+                    </template>
+
+                    <template v-else>
+                        <IconButton name="refresh" label="Sync" :size="18" />
+                        <IconButton name="keyboard" label="Keyboard shortcuts" :size="18" @click="help = true" />
+                        <span class="ml-auto text-xs text-stone-400">
+                            {{ props.threads.total }} {{ props.threads.total === 1 ? 'conversation' : 'conversations' }}
+                        </span>
+                    </template>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto">
+                    <div v-for="(thread, index) in rows" :id="`thread-${thread.id}`" :key="thread.id">
+                        <ThreadRow
+                            :thread="thread"
+                            :open="props.open?.thread.id === thread.id"
+                            :checked="checked.has(thread.id)"
+                            :cursor="cursor === index"
+                            @open="openThread(thread)"
+                            @check="toggleCheck(thread)"
+                            @star="star(thread)"
+                            @read="(read) => markRead(thread, read)"
+                        />
+                    </div>
+
+                    <div v-if="!rows.length" class="px-4 py-16 text-center">
+                        <p class="text-sm text-stone-500 dark:text-stone-400">
+                            <template v-if="props.filters.q">Nothing matched “{{ props.filters.q }}”.</template>
+                            <template v-else>Nothing here yet.</template>
+                        </p>
+                        <Link
+                            v-if="!props.filters.q"
+                            href="/accounts"
+                            class="mt-2 inline-block text-sm text-sky-600 underline dark:text-sky-400"
+                        >
+                            Connect a mailbox
+                        </Link>
+                    </div>
+                </div>
+
+                <div
+                    v-if="props.threads.last_page > 1"
+                    class="flex h-10 shrink-0 items-center justify-between border-t border-stone-200 px-3 text-xs dark:border-stone-800"
+                >
+                    <Link
+                        v-if="props.threads.prev_page_url"
+                        :href="props.threads.prev_page_url"
+                        class="text-sky-600 hover:underline dark:text-sky-400"
+                        preserve-scroll
+                    >← Newer</Link>
+                    <span v-else />
+                    <span class="text-stone-400">
+                        Page {{ props.threads.current_page }} of {{ props.threads.last_page }}
                     </span>
+                    <Link
+                        v-if="props.threads.next_page_url"
+                        :href="props.threads.next_page_url"
+                        class="text-sky-600 hover:underline dark:text-sky-400"
+                        preserve-scroll
+                    >Older →</Link>
+                    <span v-else />
+                </div>
+            </section>
 
-                    <ProviderBadge
-                        v-for="provider in thread.providers"
-                        :key="provider"
-                        :provider="provider"
-                    />
+            <ThreadPane v-if="props.open" ref="pane" :open="props.open" @close="closeThread" />
 
-                    <span v-if="thread.is_starred" class="shrink-0 text-amber-500" title="Starred">★</span>
-                    <span v-if="thread.has_attachments" class="shrink-0 text-stone-400" title="Has attachments">
-                        ⏚
-                    </span>
-
-                    <RelativeTime
-                        :value="thread.last_message_at"
-                        class="w-20 shrink-0 text-right text-xs text-stone-400"
-                    />
-                </Link>
-            </li>
-        </ul>
-
-        <div v-else class="px-4 py-16 text-center">
-            <p class="text-sm text-stone-500 dark:text-stone-400">
-                <template v-if="filters.q">Nothing matched “{{ filters.q }}”.</template>
-                <template v-else>Nothing here yet.</template>
-            </p>
-            <Link
-                v-if="!filters.q"
-                href="/accounts"
-                class="mt-2 inline-block text-sm text-sky-600 underline dark:text-sky-400"
-            >
-                Connect a mailbox
-            </Link>
+            <section v-else class="hidden min-h-0 flex-1 items-center justify-center lg:flex">
+                <div class="max-w-xs text-center">
+                    <p class="text-sm text-stone-400">Pick a conversation to read it here.</p>
+                    <button
+                        type="button"
+                        class="mt-2 text-sm text-sky-600 hover:underline dark:text-sky-400"
+                        @click="help = true"
+                    >
+                        Keyboard shortcuts
+                    </button>
+                </div>
+            </section>
         </div>
 
-        <div v-if="threads.last_page > 1" class="flex items-center justify-between px-4 py-3 text-sm">
-            <Link
-                v-if="threads.prev_page_url"
-                :href="threads.prev_page_url"
-                class="text-sky-600 hover:underline dark:text-sky-400"
-                preserve-scroll
-            >
-                ← Newer
-            </Link>
-            <span v-else />
+        <!-- Phone compose button. The desktop rail has its own, but below md the rail
+             is not on screen at all. -->
+        <button
+            type="button"
+            class="fixed right-4 bottom-5 z-20 flex h-14 items-center gap-2.5 rounded-full bg-stone-900 px-5 font-semibold text-white shadow-lg transition hover:bg-stone-800 md:hidden dark:bg-stone-100 dark:text-stone-900"
+            @click="composing = true"
+        >
+            <Icon name="pencil" :size="20" />
+            Compose
+        </button>
 
-            <span class="text-stone-400">Page {{ threads.current_page }} of {{ threads.last_page }}</span>
-
-            <Link
-                v-if="threads.next_page_url"
-                :href="threads.next_page_url"
-                class="text-sky-600 hover:underline dark:text-sky-400"
-                preserve-scroll
-            >
-                Older →
-            </Link>
-            <span v-else />
-        </div>
+        <FloatingComposer v-if="composing" @close="composing = false" />
+        <ShortcutHelp v-if="help" @close="help = false" />
     </AppLayout>
 </template>

@@ -1,0 +1,146 @@
+<script setup>
+import { computed } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
+import Icon from './Icon.vue'
+
+const props = defineProps({
+    // The drawer wants larger hit targets than the desktop rail.
+    dense: { type: Boolean, default: true },
+})
+
+const emit = defineEmits(['navigate'])
+
+const page = usePage()
+const accounts = computed(() => page.props.accounts ?? [])
+const counts = computed(() => page.props.counts ?? {})
+const filters = computed(() => page.props.filters ?? {})
+
+const views = computed(() => [
+    { key: 'inbox', label: 'Inbox', icon: 'inbox', count: counts.value.inbox },
+    { key: 'unread', label: 'Unread', icon: 'mailopen', count: counts.value.unread },
+    { key: 'starred', label: 'Starred', icon: 'star', count: counts.value.starred },
+    { key: 'sent', label: 'Sent', icon: 'send', count: null },
+    { key: 'all', label: 'All mail', icon: 'archive', count: null },
+])
+
+const rowHeight = computed(() => (props.dense ? 'h-9' : 'h-12'))
+const textSize = computed(() => (props.dense ? 'text-sm' : 'text-[0.95rem]'))
+
+function go(params) {
+    emit('navigate')
+    // Dropping the open thread on a view change is deliberate: the thread you were
+    // reading is usually not in the list you just switched to.
+    router.get('/inbox', { ...filters.value, thread: undefined, page: undefined, ...params }, {
+        preserveState: true,
+        preserveScroll: true,
+    })
+}
+</script>
+
+<template>
+    <div class="flex min-h-0 flex-1 flex-col">
+        <Link
+            href="/compose"
+            class="mx-1 mb-3.5 flex items-center justify-center gap-2.5 rounded-full bg-stone-900 px-4 font-semibold text-white shadow-sm transition hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            :class="[props.dense ? 'h-10 text-sm' : 'h-12 text-[0.95rem]']"
+            @click="emit('navigate')"
+        >
+            <Icon name="pencil" :size="props.dense ? 18 : 20" />
+            Compose
+        </Link>
+
+        <nav class="space-y-px">
+            <button
+                v-for="view in views"
+                :key="view.key"
+                type="button"
+                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+                :class="[
+                    rowHeight, textSize,
+                    filters.view === view.key
+                        ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                        : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+                ]"
+                @click="go({ view: view.key })"
+            >
+                <Icon :name="view.icon" :size="props.dense ? 18 : 20" />
+                <span class="truncate">{{ view.label }}</span>
+                <span v-if="view.count" class="ml-auto text-xs font-semibold">{{ view.count }}</span>
+            </button>
+        </nav>
+
+        <div class="mx-3 my-3 h-px bg-stone-200 dark:bg-stone-800" />
+
+        <p class="px-3 pb-1.5 text-[0.65rem] font-semibold tracking-wider text-stone-400 uppercase">
+            Mailboxes
+        </p>
+
+        <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+            :class="[
+                rowHeight, textSize,
+                !filters.account
+                    ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+            ]"
+            @click="go({ account: undefined })"
+        >
+            <span
+                class="ml-1 size-2 shrink-0 rounded-full"
+                style="background: linear-gradient(135deg, var(--mailbox-gmail_api) 0 33%, var(--mailbox-imap) 33% 66%, var(--mailbox-graph) 66%)"
+            />
+            <span class="truncate">All mailboxes</span>
+        </button>
+
+        <button
+            v-for="account in accounts"
+            :key="account.id"
+            type="button"
+            class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+            :class="[
+                rowHeight, textSize,
+                filters.account === account.id
+                    ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+            ]"
+            @click="go({ account: account.id })"
+        >
+            <span
+                class="mailbox-fill ml-1 size-2 shrink-0 rounded-full"
+                :style="{ '--mailbox': `var(--mailbox-${account.provider})` }"
+            />
+            <span class="truncate">{{ account.label }}</span>
+            <span
+                v-if="account.status === 'auth_error'"
+                class="ml-auto text-xs font-semibold text-red-600 dark:text-red-400"
+                title="Reconnect needed"
+            >!</span>
+        </button>
+
+        <p v-if="!accounts.length" class="px-3 py-2 text-sm text-stone-400">No mailboxes yet</p>
+
+        <div class="mt-auto pt-3">
+            <div class="mx-3 mb-2 h-px bg-stone-200 dark:bg-stone-800" />
+            <Link
+                href="/accounts"
+                class="flex items-center gap-3 rounded-r-full pr-3 pl-2.5 text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                :class="[rowHeight, textSize]"
+                @click="emit('navigate')"
+            >
+                <Icon name="settings" :size="props.dense ? 18 : 20" />
+                Settings
+            </Link>
+            <Link
+                href="/logout"
+                method="post"
+                as="button"
+                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                :class="[rowHeight, textSize]"
+            >
+                <Icon name="close" :size="props.dense ? 18 : 20" />
+                Sign out
+            </Link>
+        </div>
+    </div>
+</template>

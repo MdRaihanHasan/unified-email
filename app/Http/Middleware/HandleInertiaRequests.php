@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\MailAccount;
+use App\Models\Thread;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -39,6 +40,14 @@ class HandleInertiaRequests extends Middleware
                     'backfilling' => ! $account->hasFinishedBackfill(),
                     'last_error' => $account->last_error,
                 ])->values(),
+
+            // The sidebar shows these on every screen, so they are computed lazily
+            // and skipped entirely on Inertia partial reloads that do not ask for them.
+            'counts' => fn () => $request->user() === null ? null : [
+                'inbox' => Thread::query()->inView('inbox')->where('unread_count', '>', 0)->count(),
+                'unread' => Thread::query()->where('unread_count', '>', 0)->count(),
+                'starred' => Thread::query()->where('is_starred', true)->count(),
+            ],
 
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),

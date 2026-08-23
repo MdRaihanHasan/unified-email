@@ -401,9 +401,9 @@ class ComposeTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$parent->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->has('pending', 1)
-                ->where('pending.0.status', 'failed')
-                ->where('pending.0.error', 'mailbox unavailable'));
+                ->has('open.pending', 1)
+                ->where('open.pending.0.status', 'failed')
+                ->where('open.pending.0.error', 'mailbox unavailable'));
     }
 
     public function test_a_thread_does_not_list_mail_that_already_went_out(): void
@@ -419,7 +419,7 @@ class ComposeTest extends TestCase
         ]);
 
         $this->actingAs($this->user)->get("/threads/{$parent->thread_id}")
-            ->assertInertia(fn (Assert $page) => $page->has('pending', 0));
+            ->assertInertia(fn (Assert $page) => $page->has('open.pending', 0));
     }
 
     private function queuedDraft(array $overrides = []): OutboundMessage

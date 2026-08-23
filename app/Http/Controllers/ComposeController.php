@@ -11,6 +11,7 @@ use App\Mail\Support\ReplyHeaders;
 use App\Models\MailAccount;
 use App\Models\Message;
 use App\Models\OutboundMessage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +49,47 @@ class ComposeController
         }
 
         return Inertia::render('Compose/Edit', [
-            'draft' => $this->prefill($type, $account, $parent),
+            'draft' => $this->blankDraft($type, $account, $parent),
+            'accounts' => MailAccount::query()->orderBy('id')->get()
+                ->map(fn (MailAccount $a) => [
+                    'id' => $a->id,
+                    'label' => $a->label,
+                    'email' => $a->email,
+                    'provider' => $a->provider->value,
+                ])->values(),
+        ]);
+    }
+
+    /**
+     * The same prefill as create(), as JSON.
+     *
+     * The inline reply box and the floating composer are not pages, so they cannot
+     * take an Inertia render — but recipient resolution and quoting belong on the
+     * server, not duplicated in JavaScript.
+     */
+    public function prefill(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'type' => ['nullable', Rule::enum(OutboundType::class)],
+            'message' => ['nullable', 'integer', 'exists:messages,id'],
+            'account' => ['nullable', 'integer', 'exists:mail_accounts,id'],
+        ]);
+
+        $type = OutboundType::tryFrom($data['type'] ?? '') ?? OutboundType::New;
+        $parent = isset($data['message']) ? Message::with('mailAccount')->find($data['message']) : null;
+
+        if ($type !== OutboundType::New && $parent === null) {
+            return response()->json(['message' => 'That message is no longer available to reply to.'], 422);
+        }
+
+        $account = $this->sendingAccount($data['account'] ?? null, $parent);
+
+        if ($account === null) {
+            return response()->json(['message' => 'Connect a mailbox before composing.'], 422);
+        }
+
+        return response()->json([
+            'draft' => $this->blankDraft($type, $account, $parent),
             'accounts' => MailAccount::query()->orderBy('id')->get()
                 ->map(fn (MailAccount $a) => [
                     'id' => $a->id,
@@ -227,7 +268,7 @@ class ComposeController
         return $parent?->mailAccount ?? MailAccount::query()->orderBy('id')->first();
     }
 
-    private function prefill(OutboundType $type, MailAccount $account, ?Message $parent): array
+    private function blankDraft(OutboundType $type, MailAccount $account, ?Message $parent): array
     {
         if ($parent === null) {
             return [

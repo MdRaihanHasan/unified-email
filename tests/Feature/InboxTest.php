@@ -210,10 +210,10 @@ class InboxTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$first->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Inbox/Show')
-                ->has('messages', 2)
-                ->where('messages.0.subject', 'Message m1')
-                ->where('messages.1.subject', 'Message m2'));
+                ->component('Inbox/Index')
+                ->has('open.messages', 2)
+                ->where('open.messages.0.subject', 'Message m1')
+                ->where('open.messages.1.subject', 'Message m2'));
     }
 
     public function test_a_thread_body_is_sanitised_before_it_reaches_the_page(): void
@@ -224,7 +224,7 @@ class InboxTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$message->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->where('messages.0.body_html', fn (string $html) => ! str_contains($html, 'script')
+                ->where('open.messages.0.body_html', fn (string $html) => ! str_contains($html, 'script')
                     && str_contains($html, 'Hello')));
     }
 
@@ -243,13 +243,13 @@ class InboxTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$first->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->where('messages.0.blocked_images', 1)
-                ->where('messages.1.blocked_images', 1));
+                ->where('open.messages.0.blocked_images', 1)
+                ->where('open.messages.1.blocked_images', 1));
 
         $this->actingAs($this->user)->get("/threads/{$first->thread_id}?show_images={$first->id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->where('messages.0.blocked_images', 0)
-                ->where('messages.1.blocked_images', 1, 'the other message stays blocked'));
+                ->where('open.messages.0.blocked_images', 0)
+                ->where('open.messages.1.blocked_images', 1, 'the other message stays blocked'));
     }
 
     public function test_a_message_without_a_body_says_so_rather_than_rendering_blank(): void
@@ -258,8 +258,8 @@ class InboxTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$message->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->where('messages.0.has_body', false)
-                ->where('messages.0.body_html', ''));
+                ->where('open.messages.0.has_body', false)
+                ->where('open.messages.0.body_html', ''));
     }
 
     public function test_inline_attachments_are_not_listed_as_files(): void
@@ -273,8 +273,8 @@ class InboxTest extends TestCase
 
         $this->actingAs($this->user)->get("/threads/{$message->thread_id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->has('messages.0.attachments', 1)
-                ->where('messages.0.attachments.0.filename', 'invoice.pdf'));
+                ->has('open.messages.0.attachments', 1)
+                ->where('open.messages.0.attachments.0.filename', 'invoice.pdf'));
     }
 
     // ---- flags ------------------------------------------------------------

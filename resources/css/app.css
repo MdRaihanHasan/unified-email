@@ -1,14 +1,38 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode, so the theme can be toggled rather than only inherited
+   from the OS. AppLayout puts .dark on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../js/**/*.vue';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-@source '../js/**/*.vue';
+/*
+ * One hue per connected mailbox. A merged inbox otherwise hides the single thing
+ * that decides how you reply, and the providers' own brand colours are not ours to
+ * use — these are three well-separated hues at matching lightness and chroma.
+ * Lifted a step lighter in dark mode so they still read against a near-black panel.
+ */
+:root {
+    --mailbox-gmail_api: oklch(58% .17 25);
+    --mailbox-imap: oklch(62% .15 75);
+    --mailbox-graph: oklch(56% .17 295);
+}
+
+.dark {
+    --mailbox-gmail_api: oklch(68% .17 25);
+    --mailbox-imap: oklch(74% .15 75);
+    --mailbox-graph: oklch(68% .17 295);
+}
+
+.mailbox-stripe { border-left-color: var(--mailbox, transparent); }
+.mailbox-fill { background-color: var(--mailbox, currentColor); }
 
 /*
  * Email bodies are foreign HTML from arbitrary senders. Tailwind's preflight has

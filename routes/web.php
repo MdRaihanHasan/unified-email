@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ComposeController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\MessageFlagController;
+use App\Http\Controllers\ThreadActionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -19,8 +20,10 @@ Route::middleware('auth')->group(function () {
     Route::get('threads/{thread}', [InboxController::class, 'show'])->name('threads.show');
 
     Route::patch('messages/{message}/flags', [MessageFlagController::class, 'update'])->name('messages.flags');
+    Route::post('threads/actions', [ThreadActionController::class, 'update'])->name('threads.actions');
 
     Route::get('compose', [ComposeController::class, 'create'])->name('compose');
+    Route::get('compose/prefill', [ComposeController::class, 'prefill'])->name('compose.prefill');
     Route::post('compose', [ComposeController::class, 'store'])->name('compose.store');
     Route::post('compose/attach', [ComposeController::class, 'attach'])->name('compose.attach');
     Route::get('compose/{outbound}', [ComposeController::class, 'edit'])->name('compose.edit');
