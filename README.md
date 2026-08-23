@@ -51,38 +51,37 @@ scope-এ অপ্রয়োজনীয় — কারণ ব্যাখ�
 - [`docs/deployment.md`](docs/deployment.md) — কোথায় deploy করা যাবে (আর কেন Vercel-এ
   যাবে না), VPS/local/PaaS-এর তুলনা
 
-## Quick start
+## Quick start (Docker)
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
-# http://localhost:8000
+
+# APP_KEY একবার — entrypoint কখনো নিজে generate করে না, কারণ প্রতিটা mailbox-এর
+# refresh token এই key দিয়ে encrypted। আউটপুটটা .env-এ বসাও, আর অন্য কোথাও backup রাখো।
+docker compose run --rm --no-deps app php artisan key:generate --show
+
+docker compose up -d --build                    # migration নিজেই চলে
+docker compose exec app php artisan mail:user   # login বানাও
 ```
 
-Login বানাতে (registration route নেই — single user):
+http://localhost:8000 → **Settings → Connect a Gmail account** (personal আর Workspace,
+একই button)।
+
+Gmail credential ছাড়া UI দেখতে:
 
 ```bash
-docker compose exec app php artisan mail:user
-```
-
-IMAP account যোগ করার পরে IDLE daemon চালু করতে:
-
-```bash
-# .env-এ IDLE_ACCOUNT=you@gmail.com দিয়ে
-docker compose --profile idle up -d
+docker compose exec app php artisan db:seed --class=DemoSeeder   # demo@example.com / password
 ```
 
 Docker ছাড়া local dev (Postgres 16 + Redis নিজে চালু থাকলে):
 
 ```bash
-composer install && cp .env.example .env
-php artisan key:generate && php artisan migrate
-php artisan test
-php artisan serve            # web
-php artisan queue:work       # worker
+composer install && npm install && npm run build
+cp .env.example .env && php artisan key:generate && php artisan migrate
+php artisan serve            # :8000 — Google-এর redirect URI এই port-এই
+php artisan queue:work       # backfill, send, flag push
 php artisan schedule:work    # প্রতি মিনিটে delta poll
+php artisan test
 ```
 
 > Test-গুলো Postgres-এ চলে, SQLite-এ নয় — schema-তে generated `tsvector` column,

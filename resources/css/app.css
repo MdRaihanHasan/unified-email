@@ -1,12 +1,26 @@
-@import 'tailwindcss';
+/*
+ * source(none) turns off Tailwind's automatic project scan, so only the @source
+ * lines below count. Two reasons: the scan reads prose as class candidates (the
+ * word "container" in a markdown doc generated a .container rule), and it makes
+ * the CSS depend on which files happen to be present — so the host build and the
+ * Docker build produced different stylesheets.
+ */
+@import 'tailwindcss' source(none);
 
 /* Class-based dark mode, so the theme can be toggled rather than only inherited
    from the OS. AppLayout puts .dark on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/*
+ * Sources, explicitly. The skeleton pointed at Laravel's Blade paginator and the
+ * compiled-view cache; this app paginates in Vue and has exactly one Blade file,
+ * so those pulled in ~5.6 kB of gray-* utilities nothing renders — and made the
+ * asset build depend on vendor/ being present, which it is not in the Docker
+ * stage that builds it.
+ */
 @source '../js/**/*.vue';
+@source '../js/**/*.js';
+@source '../views/**/*.blade.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',

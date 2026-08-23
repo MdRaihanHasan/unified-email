@@ -33,15 +33,54 @@ Vercel এই app-এর জন্য কাজ করবে না — এক�
 Personal tool-এর জন্য এটাই প্রথম choice।
 
 ```bash
-docker compose up -d
-# http://localhost:8000
+cp .env.example .env
+
+# APP_KEY একবার বানাও। এটা harden করা আছে: entrypoint কখনো নিজে key generate
+# করে না, কারণ প্রতিটা mailbox-এর refresh token এই key দিয়ে encrypt করা — boot-এ
+# নতুন key বসালে সব credential অপাঠ্য হয়ে যেত, আর account গুলো connected দেখাত
+# কিন্তু প্রথম sync-এই fail করত।
+docker compose run --rm --no-deps app php artisan key:generate --show
+# আউটপুটটা .env-এর APP_KEY=... এ বসাও
+
+docker compose up -d --build          # migration app container নিজেই চালায়
+docker compose exec app php artisan mail:user   # login বানাও
 ```
 
-- খরচ শূন্য, data ১০০% নিজের কাছে
-- সব provider connection outbound, তাই কোনো port forward বা public IP লাগে না
-- **শর্ত:** machine বন্ধ থাকলে sync হবে না। চালু করলে delta/IDLE ধরে আবার catch up
-  করে নেবে (cursor DB-তে আছে), তাই email হারাবে না — শুধু দেরি হবে
-- সারাক্ষণ চালু NAS/mini-PC/Raspberry Pi থাকলে এটাই আদর্শ
+তারপর http://localhost:8000 — Settings → Connect a Gmail account।
+
+**`APP_KEY`-এর backup অন্য কোথাও রাখো।** হারালে প্রতিটা mailbox আবার connect করতে হবে।
+
+Container গুলো:
+
+| Service | কাজ |
+|---|---|
+| `app` | FrankenPHP (Caddy + PHP এক process), :8000-এ loopback-এ bind |
+| `worker` | `queue:work` — backfill, body fetch, send, flag push |
+| `scheduler` | `schedule:work` — প্রতি মিনিটে delta poll |
+| `postgres` | 16-alpine |
+| `redis` | queue + cache |
+| `imap-idle` | শুধু plain IMAP mailbox-এর জন্য; Gmail-এ লাগে না, তাই profile-এর পিছনে |
+
+দুইটা জিনিস ইচ্ছে করে করা:
+
+- **`storage/app` volume `app` আর `worker` ভাগ করে।** Draft-এ attach করা file
+  web container লেখে, কিন্তু send করার সময় worker পড়ে — আলাদা volume হলে প্রতিটা
+  attachment হারিয়ে যেত।
+- **শুধু `app` migration চালায়** (`RUN_MIGRATIONS=true`)। Worker আর scheduler একই
+  migration-এ race করলে schema আধা-প্রয়োগ হয়ে বসে থাকতে পারে।
+
+**শর্ত:** machine বন্ধ থাকলে sync হবে না। চালু করলে cursor DB-তে আছে, catch up করে
+নেবে — email হারাবে না, শুধু দেরি হবে।
+
+দৈনন্দিন command:
+
+```bash
+docker compose logs -f app worker      # কী হচ্ছে দেখতে
+docker compose exec app php artisan mail:watchdog   # কোনো account পিছিয়ে আছে?
+docker compose exec app php artisan mail:sync       # এখনই sync
+docker compose down                    # থামাও (data volume-এ থাকে)
+docker compose up -d --build           # code বদলের পর
+```
 
 ### ⭐ Option B — একটা ছোট VPS, একই Docker Compose  · ~$5/mo
 
@@ -53,11 +92,16 @@ docker compose up -d
 | DigitalOcean | 1 vCPU / 2 GB | $12/mo (1 GB $6) |
 | Vultr / Linode | 1 vCPU / 2 GB | ~$10-12/mo |
 
-৩টা mailbox-এর জন্য 2 GB RAM যথেষ্ট, 4 GB আরামদায়ক। Deploy = `git pull && docker compose up -d --build`.
+৩টা mailbox-এ 2 GB RAM যথেষ্ট, 4 GB আরামদায়ক। Deploy = `git pull && docker compose up -d --build`.
 
-**নিরাপত্তা:** app-এর port publicly bind করবে না। হয় **Tailscale** (সবচেয়ে সহজ,
-free, কোনো port খোলা লাগে না), নয় Caddy/nginx + TLS + strong auth। একজনের personal
-mailbox — internet-এ খোলা রাখার কোনো কারণ নেই।
+দুইটা জিনিস বদলাতে হবে:
+
+1. **`APP_URL`** — Google-এর redirect URI hostname-সহ hubohu মিলতে হবে, তাই নতুন
+   URL-টা Cloud Console-এর Authorized redirect URIs-এ যোগ করো
+   (`https://mail.example.com/gmail/callback`)।
+2. **App port publicly bind করবে না।** Compose ইচ্ছে করেই `127.0.0.1`-এ bind করে।
+   হয় **Tailscale** (সবচেয়ে সহজ, free, কোনো port খোলা লাগে না), নয় Caddy/nginx
+   reverse proxy + TLS। একজনের personal mailbox internet-এ খোলা রাখার কারণ নেই।
 
 ### Option C — Vercel-এর মতো DX চাইলে: VPS + Coolify / Dokploy  · ~$5/mo
 

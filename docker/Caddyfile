@@ -1,0 +1,29 @@
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp
+
+	# php_server has to win over file_server, or Caddy serves index.php as text.
+	order php_server before file_server
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log {
+		# Compose captures stdout, so logs stay where docker logs can find them.
+		output stderr
+		format console
+	}
+
+	root /app/public
+	encode zstd br gzip
+
+	# Long-lived caching for the hashed Vite output, none for anything else.
+	@immutable path /build/assets/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	php_server {
+		index index.php
+	}
+}
