@@ -18,7 +18,8 @@ const user = computed(() => page.props.auth?.user)
 // rather than only a log line.
 const broken = computed(() => accounts.value.filter((a) => a.status === 'auth_error'))
 const stale = computed(() => accounts.value.filter((a) => a.is_stale))
-const backfilling = computed(() => accounts.value.filter((a) => a.backfilling))
+const stalled = computed(() => accounts.value.filter((a) => a.import_stalled))
+const backfilling = computed(() => accounts.value.filter((a) => a.backfilling && !a.import_stalled))
 
 const flash = computed(() => page.props.flash?.message ?? null)
 const dismissed = ref(null)
@@ -153,12 +154,31 @@ defineExpose({ focusSearch })
                     </span>
                 </div>
 
+                <!-- Nothing has run at all. Say what to check, rather than leaving a
+                     mailbox that looks connected and never fills. -->
                 <div
-                    v-if="backfilling.length"
+                    v-if="stalled.length"
+                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                >
+                    <span class="font-medium">Import has not started</span>
+                    for {{ stalled.map((a) => a.email).join(', ') }}. The job is queued but nothing is
+                    running it — check that the queue worker is up:
+                    <code class="rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900/60">docker compose ps worker</code>
+                </div>
+
+                <div
+                    v-else-if="backfilling.length"
                     class="shrink-0 border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
                 >
-                    Still importing history for {{ backfilling.map((a) => a.email).join(', ') }} — older mail
-                    will keep appearing.
+                    <span v-for="account in backfilling" :key="account.id" class="mr-3">
+                        Importing {{ account.email }}
+                        <template v-if="account.import_progress">
+                            — {{ account.import_progress.folders_done }} of
+                            {{ account.import_progress.folders_total }} folders,
+                            {{ account.import_progress.messages }} messages so far.
+                        </template>
+                    </span>
+                    <span class="text-sky-700/80 dark:text-sky-300/80">Older mail keeps appearing as it lands.</span>
                 </div>
 
                 <div
