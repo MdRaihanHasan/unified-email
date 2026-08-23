@@ -39,67 +39,73 @@ Endpoints যেগুলো লাগবে:
 
 ---
 
-## 2. Google Workspace → Gmail API (Internal app)
+## 2. Gmail — personal আর Workspace, একই OAuth client-এ
 
-**গুরুত্বপূর্ণ:** Google Cloud project-টা **Workspace domain-এর account দিয়ে** বানাতে হবে,
-নইলে consent screen-এ "Internal" option-ই আসবে না।
+> **সংশোধন:** আগে এই doc-এ লেখা ছিল Workspace-এর জন্য "Internal" app আর personal
+> Gmail-এর জন্য App Password। ওটা ভুল ছিল। **একটাই External app, "In production"
+> status-এ — দুইটাই চলে।** কারণ:
+>
+> - ৭ দিনে refresh token মরে যাওয়ার নিয়মটা শুধু **"Testing"** status-এর। Publish
+>   করলে token আর expire করে না।
+> - Unverified app production-এও restricted scope নিয়ে **চলে**। খরচ: প্রতি mailbox-এ
+>   একবার "unverified app" warning screen, আর ১০০ new-user cap। একজনের tool-এ
+>   দুইটাই অপ্রাসঙ্গিক — আর CASA assessment (বছরে $540+) লাগে না।
+>
+> ⚠️ ১০০-user cap Cloud project-এর উপর **স্থায়ী**, নতুন client id বানিয়েও reset হয় না।
+> এটা শুধু তখনই সমস্যা যদি কখনো এটা একজনের tool না থাকে।
 
-1. https://console.cloud.google.com → নতুন project (Workspace account দিয়ে login করে)
+### ধাপ
+
+1. https://console.cloud.google.com → নতুন project
 2. **APIs & Services** → Library → **Gmail API** → Enable
-3. **OAuth consent screen** → User type: **Internal** ⭐
-   - এই একটা setting-ই CASA verification, ৭ দিনের token expiry আর ১০০-user cap তিনটাই বাদ দেয়
+3. **OAuth consent screen**
+   - User type: **External**
+   - App name, support email, developer email ভরো
+   - **Publishing status: "In production"** ← এই একটা setting-ই আসল। Testing-এ রেখে
+     দিলে প্রতি সপ্তাহে সব account re-connect করতে হবে
+   - Verification-এর জন্য submit করার দরকার **নেই** — warning screen নিয়েই চলবে
 4. **Credentials** → Create credentials → **OAuth client ID** → Web application
-   - Redirect URI: `http://localhost:8000/oauth/google/callback`
-5. Scopes:
+   - Authorized redirect URI: `http://localhost:8000/gmail/callback`
+   - (VPS-এ চালালে সেই URL-ও যোগ করো — Google exact match চায়)
+5. Scopes — app নিজেই চায়, consent screen-এ আলাদা করে যোগ করার দরকার নেই:
    ```
-   https://www.googleapis.com/auth/gmail.modify
-   https://www.googleapis.com/auth/gmail.send
-   https://www.googleapis.com/auth/gmail.labels
+   https://www.googleapis.com/auth/gmail.modify   (পড়া, flag, label)
+   https://www.googleapis.com/auth/gmail.send     (পাঠানো)
    ```
+   ইচ্ছে করেই `https://mail.google.com/` নেই (পুরো IMAP-স্তরের access, দরকার নেই) আর
+   `gmail.labels`-ও নেই (ওটা label definition বানানোর জন্য, আমরা করি না)।
 6. `.env`:
    ```
    GOOGLE_CLIENT_ID=
    GOOGLE_CLIENT_SECRET=
-   GOOGLE_REDIRECT_URI=http://localhost:8000/oauth/google/callback
+   GOOGLE_REDIRECT_URI=http://localhost:8000/gmail/callback
    ```
 
-OAuth flow-এ `access_type=offline` আর `prompt=consent` দিতে হবে — নইলে refresh token আসবে না।
+### Connect করা
 
-Endpoints: `users.getProfile` · `users.labels.list` · `users.messages.list` ·
-`users.messages.get?format=raw` · `users.history.list?startHistoryId=` ·
-`users.messages.send` · `users.messages.modify` (label add/remove)
+App চালিয়ে **Settings → Connect a Gmail account**। প্রতিটা mailbox-এর জন্য একবার
+করো — personal আর Workspace, একই button।
 
-> `historyId` সংরক্ষণ করে রাখতে হবে। খুব পুরোনো হলে API **404** দেবে → full resync।
+প্রথমবার Google **"Google hasn't verified this app"** দেখাবে →
+*Advanced* → *Go to … (unsafe)*। App তোমার নিজের, তাই এটা নিরাপদ।
 
----
+⚠️ **Refresh token না এলে** app connect করতে অস্বীকার করবে (অর্ধেক-connected account
+রাখার চেয়ে ভালো)। এটা হয় যদি Google আগের একটা grant পুনর্ব্যবহার করে। সমাধান:
+https://myaccount.google.com/permissions → app-টা remove করো → আবার connect করো।
 
-## 3. Personal @gmail.com → App Password (IMAP/SMTP)
+### পরে যা মনে রাখতে হবে
 
-1. https://myaccount.google.com/security → **2-Step Verification** on করো (আগে না থাকলে)
-2. https://myaccount.google.com/apppasswords → app password generate → **16 character** কপি করো
-3. Gmail settings → Forwarding and POP/IMAP → **IMAP enable** (এখন default-এ on থাকে)
-4. `.env` নয়, DB-তে (encrypted) — connect UI দিয়ে ঢুকবে:
-   ```
-   IMAP  imap.gmail.com : 993  SSL
-   SMTP  smtp.gmail.com : 465  SSL
-   user  <you>@gmail.com
-   pass  <16-char app password>
-   ```
-
-মনে রাখার জিনিস:
-- Google account-এর main password বদলালে **app password revoke হয়ে যায়** → re-enter করতে হবে
-- `smtp.gmail.com` দিয়ে পাঠালে Gmail **নিজেই** Sent-এ copy রাখে — manual `APPEND` করলে duplicate
-- Gmail IMAP-এ folder আসলে label: `[Gmail]/Sent Mail`, `[Gmail]/All Mail`, `[Gmail]/Trash`
-- `All Mail` আর `INBOX` একই message দেখাবে — backfill-এ শুধু একটা বেছে নিতে হবে, নইলে দ্বিগুণ কাজ
-- IDLE-এ Gmail নিষ্ক্রিয় connection ~২৯ মিনিটে drop করে → প্রতি ~২৫ মিনিটে re-IDLE করতে হবে
-
----
+- Google account-এর password বদলালে refresh token টেকে, কিন্তু **app permission
+  revoke করলে** যায় — তখন Settings-এ "Reconnect" দেখাবে
+- `historyId` সংরক্ষিত থাকে; খুব পুরোনো হলে Gmail **404** দেয় → app নিজেই full
+  resync করে নেয়
 
 ## Checklist
 
 - [ ] Entra app registration + client secret + delegated permissions
-- [ ] Google Cloud project (Workspace account দিয়ে), Gmail API enabled, consent screen = **Internal**
-- [ ] Google OAuth client + redirect URI
-- [ ] Personal Gmail-এ 2FA + app password
+- [ ] Google Cloud project, Gmail API enabled, consent screen **External** +
+      publishing status **"In production"**
+- [ ] Google OAuth client + redirect URI `…/gmail/callback`
+- [ ] প্রতিটা Gmail mailbox Settings থেকে connect করা (warning screen পেরিয়ে)
 - [ ] `.env` ভরা, `.env` git-এ নেই
 - [ ] `APP_KEY` generate + **আলাদা জায়গায় backup** (হারালে সব credential অপাঠ্য)

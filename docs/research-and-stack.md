@@ -15,8 +15,8 @@ Scope: **single-user, self-hosted personal tool** (SaaS নয়)
 
 | # | Account | Provider path |
 |---|---|---|
-| 1 | Google Workspace (নিজের domain) | **Gmail API** (Internal OAuth app) |
-| 2 | Personal `@gmail.com` | **IMAP/SMTP + App Password** |
+| 1 | Google Workspace (নিজের domain) | **Gmail API** |
+| 2 | Personal `@gmail.com` | **Gmail API** — একই OAuth app |
 | 3 | Personal Outlook.com | **Microsoft Graph** (`/common` app registration) |
 
 এই scope-এ আগের SaaS plan-এর দুইটা বড় খরচ সম্পূর্ণ বাদ গেল: **EmailEngine license
@@ -54,36 +54,36 @@ abstraction-টা vendor-independence-এর জন্য নয়, **তি�
 
 ## 3. Auth — প্রতিটা account-এর আলাদা পথ, আলাদা কারণে
 
-### 3.1 Google Workspace → Gmail API, "Internal" OAuth app ⭐
+### 3.1 সব Gmail mailbox → একটাই External OAuth app, "In production" ⭐
 
-নিজের domain Workspace-এ থাকায় OAuth consent screen **"Internal"** করা যায়। এতে:
+> **এই অংশটা সংশোধিত।** আগে লিখেছিলাম Workspace-এর জন্য Internal app আর personal
+> Gmail-এর জন্য App Password। ওটা ভুল ছিল — একটাই app দুইটাই সামলায়।
 
-- ❌ verification লাগে **না** (CASA-ও না) — restricted scope নিয়েও
-- ❌ ৭ দিনের refresh-token expiry **নেই** (ওটা শুধু External + Testing-এর নিয়ম)
-- ❌ ১০০ test-user cap নেই
-- ✅ Gmail API-র সব কিছু, Pub/Sub push সহ
+দুইটা তথ্য যা পুরো হিসাব বদলে দেয়:
 
-Scopes: `gmail.modify` (read + flag + label), `gmail.send`, `gmail.labels`.
+- **৭ দিনে refresh token revoke হওয়ার নিয়মটা শুধু "Testing" publishing status-এর।**
+  App publish করলে token আর expire করে না।
+- **Unverified app "In production"-এও restricted scope নিয়ে চলে।** খরচ: প্রতি mailbox-এ
+  একবার "unverified app" warning screen, আর ১০০ new-user cap।
 
-> এটাই সবচেয়ে পরিষ্কার পথ। Setup: Google Cloud project → OAuth consent screen
-> = Internal → Desktop/Web client → refresh token একবার নিয়ে DB-তে encrypted রাখা।
+মানে personal Gmail-এর জন্য App Password-এর কোনো দরকার নেই, আর **CASA assessment
+(বছরে $540+, প্রতি বছর renew) সম্পূর্ণ এড়ানো যায়** — verification-এর জন্য submit না
+করেই।
 
-### 3.2 Personal @gmail.com → App Password + IMAP/SMTP
+Scopes: `gmail.modify` (পড়া, flag, label) + `gmail.send`। ইচ্ছে করেই
+`https://mail.google.com/` নেই (পুরো IMAP-স্তরের access, দরকার নেই)।
 
-Personal Gmail Workspace org-এর বাইরে, তাই Internal app ওটাকে authorize করতে পারবে না।
-বাকি দুইটা OAuth পথ দুইভাবেই খারাপ:
+⚠️ ১০০-user cap Cloud project-এর উপর **স্থায়ী** — নতুন client id বানিয়েও reset হয় না।
+একজনের tool-এ অপ্রাসঙ্গিক, কিন্তু কখনো অন্য কাউকে দিতে চাইলে জানা থাকা দরকার।
 
-- External + **Testing** mode → refresh token **৭ দিনে revoke** → প্রতি সপ্তাহে re-auth
-- External + **Production** + restricted scope → **CASA Tier 2** লাগবে, ~$540+/yr recurring
+একটা "Internal" app warning screen এড়াত, কিন্তু শুধু Workspace org-এর account
+authorize করে — personal Gmail বাদ পড়ে যেত। তাই External।
 
-**তাই App Password।** ২০২৬-এও কাজ করে — March 2025-এ শুধু *regular password* বন্ধ
-হয়েছে, 2FA-এর পরে generate করা 16-character app password ঠিকই চলে। কোনো OAuth app,
-verification, বা token expiry নেই।
+### 3.2 IMAP/SMTP → Gmail-এর জন্য বাদ
 
-- Server: `imap.gmail.com:993` (SSL), `smtp.gmail.com:465` (SSL)
-- ⚠️ 2-Step Verification অবশ্যই on থাকতে হবে
-- ⚠️ Google account-এর main password বদলালে app password revoke হয়ে যায় → re-enter করতে হবে
-- Real-time: **IMAP IDLE** — outbound connection, কোনো public endpoint লাগে না, প্রায় instant
+উপরের কারণেই এটা আর লাগছে না। `ImapProvider` আর `mail:idle` daemon codebase-এ
+রয়ে গেল অন্য কোনো host-এর জন্য (নিজের domain-এর mail server ইত্যাদি) — Gmail-এর
+জন্য নয়।
 
 ### 3.3 Personal Outlook.com → Microsoft Graph
 
@@ -113,9 +113,11 @@ user token ছাড়া maintain করা **যায় না**, আর su
 
 | Account | Mechanism | Latency |
 |---|---|---|
-| Workspace Gmail | `users.history.list` (stored `historyId`), প্রতি ৩০-৬০ সে. | ~৩০-৬০ সে. |
-| Personal Gmail | **IMAP IDLE** (long-lived outbound connection) | প্রায় instant |
-| Outlook.com | Graph `/messages/delta` (stored `deltaLink`), প্রতি ৩০-৬০ সে. | ~৩০-৬০ সে. |
+| দুইটা Gmail | `users.history.list` (stored `historyId`), প্রতি মিনিটে | ~১ মিনিট |
+| Outlook.com | Graph `/messages/delta` (stored `deltaLink`), প্রতি মিনিটে | ~১ মিনিট |
+
+(IMAP IDLE-এর প্রায়-instant path রয়ে গেল, কিন্তু কোনো Gmail account আর ওটা ব্যবহার
+করছে না।)
 
 **কোনো public endpoint, tunnel, বা static IP লাগবে না।** পরে চাইলে Workspace account-এ
 Pub/Sub push যোগ করা যাবে — sync engine-এর ভিতরে সেটা শুধু আরেকটা trigger, নতুন pipeline নয়।
@@ -157,7 +159,7 @@ Container সংখ্যা ৬-৭ থেকে **৪**-এ নামল: `app
 | Item | Cost |
 |---|---|
 | সব license (Gmail API, Graph, Laravel, Postgres) | **$0** |
-| Google CASA | **$0** (Internal app + App Password, তাই লাগে না) |
+| Google CASA | **$0** — published-but-unverified app হওয়ায় লাগেই না |
 | Microsoft publisher verification | **$0** (লাগে না) |
 | Local Docker-এ চালালে hosting | **$0** |
 | ছোট VPS-এ চালালে (2GB RAM যথেষ্ট) | ~$5–10 / mo |

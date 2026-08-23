@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ComposeController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\MessageFlagController;
+use App\Http\Controllers\Oauth\GoogleController;
 use App\Http\Controllers\ThreadActionController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('compose/{outbound}', [ComposeController::class, 'destroy'])->name('compose.destroy');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts');
+
+    // The callback path must match the redirect URI registered in Google Cloud
+    // Console exactly, so it is spelled out here rather than nested under /oauth.
+    Route::get('gmail/connect', [GoogleController::class, 'connect'])->name('gmail.connect');
+    Route::get('gmail/callback', [GoogleController::class, 'callback'])->name('gmail.callback');
 
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 });
