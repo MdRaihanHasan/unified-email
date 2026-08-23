@@ -25,3 +25,9 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Design canvas: generated from .design/gen*.py, and the seeded payload is ~3 MB
+/.design/body-*.html
+/.design/preview-*.html
+/.design/*-redesign.html
+/.design/__pycache__

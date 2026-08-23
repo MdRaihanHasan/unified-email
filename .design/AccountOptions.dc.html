@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent); text-decoration: underline; }
+    * { box-sizing: border-box; }
+
+    .app {
+      --bg: oklch(98.5% .001 106.423);
+      --panel: #ffffff;
+      --panel-2: oklch(97% .001 106.424);
+      --line: oklch(92.3% .003 48.717);
+      --ink: oklch(21.6% .006 56.043);
+      --ink-2: oklch(44.4% .011 73.639);
+      --ink-3: oklch(70.9% .01 56.259);
+      --accent: oklch(58.8% .158 241.966);
+      --accent-soft: oklch(96.5% .022 240);
+      --star: oklch(76.9% .188 70.08);
+      --hover: oklch(97% .001 106.424);
+      --sel: oklch(96.5% .022 240);
+      --shadow: 0 1px 2px oklch(0% 0 0 / .07), 0 10px 28px oklch(0% 0 0 / .10);
+      --p-work: oklch(58% .17 25);
+      --p-gmail: oklch(62% .15 75);
+      --p-outlook: oklch(56% .17 295);
+      font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app.dark {
+      --bg: oklch(14.7% .004 49.25);
+      --panel: oklch(21.6% .006 56.043);
+      --panel-2: oklch(26.8% .007 34.298);
+      --line: oklch(26.8% .007 34.298);
+      --ink: oklch(97% .001 106.424);
+      --ink-2: oklch(70.9% .01 56.259);
+      --ink-3: oklch(55.3% .013 58.071);
+      --accent: oklch(74.6% .16 232.661);
+      --accent-soft: oklch(29.3% .066 243.157);
+      --hover: oklch(26.8% .007 34.298);
+      --sel: oklch(29.3% .066 243.157);
+      --shadow: 0 1px 2px oklch(0% 0 0 / .5), 0 10px 28px oklch(0% 0 0 / .6);
+      --p-work: oklch(68% .17 25);
+      --p-gmail: oklch(74% .15 75);
+      --p-outlook: oklch(68% .17 295);
+    }
+
+    .ico { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .ico-s { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .iconbtn { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; color: var(--ink-2); background: none; border: 0; }
+    .iconbtn:hover { background: var(--hover); }
+  </style>
+</helmet>
+
+<div class="app {{theme}}" style="width:1140px;height:660px;display:flex;
+     flex-direction:column;background:var(--bg);color:var(--ink);overflow:hidden">
+
+  <div style="flex:1;padding:26px 28px;display:flex;flex-direction:column;gap:18px;min-height:0">
+    <div>
+      <h1 style="margin:0 0 5px;font-size:19px;font-weight:600;letter-spacing:-.015em">
+        Which mailbox did this arrive in?</h1>
+      <p style="margin:0;color:var(--ink-2);max-width:760px">
+        A problem a single-mailbox client never has to solve: merging three inboxes hides the one
+        thing that decides how you reply. Four ways to put it back, all using the same three hues
+        as the sidebar.</p>
+    </div>
+    <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));
+                gap:18px">
+      <div style="display:flex;flex-direction:column;border:1px solid var(--line);
+                  border-radius:10px;background:var(--panel);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px 12px;
+                    border-bottom:1px solid var(--line)">
+          <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;
+                       border-radius:6px;background:var(--panel-2);font-size:12px;font-weight:600;
+                       color:var(--ink-2);flex:0 0 auto">A</span>
+          <span style="font-weight:600">Colour stripe down the row</span>
+          <span style="margin-left:auto;padding:2px 9px;border-radius:999px;background:var(--sel);color:var(--accent);font-size:11px;font-weight:600">used in the mockups</span>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      border-left:3px solid var(--p-work);">
+            <span style="padding-left:9px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-work);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">O</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">Ops Team</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">Deploy window moved to Thursday</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      border-left:3px solid var(--p-gmail);">
+            <span style="padding-left:9px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-gmail);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">হ</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">হিসাব বিভাগ</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">চালান ৪২ — ধন্যবাদ</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:transparent;
+                      border-left:3px solid var(--p-outlook);">
+            <span style="padding-left:9px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:400">Anna Bergström</span>
+            
+            <span class="truncate" style="flex:1;font-weight:400">Invoice 2418 — payment terms</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div></div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Works</span>
+            <span style="color:var(--ink-2)">Reads at a glance without occupying a column; scales to 500 rows.</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Costs</span>
+            <span style="color:var(--ink-2)">Three more hues to keep straight, and a stripe is easy to miss on a dense screen.</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;border:1px solid var(--line);
+                  border-radius:10px;background:var(--panel);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px 12px;
+                    border-bottom:1px solid var(--line)">
+          <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;
+                       border-radius:6px;background:var(--panel-2);font-size:12px;font-weight:600;
+                       color:var(--ink-2);flex:0 0 auto">B</span>
+          <span style="font-weight:600">Tinted ring on the avatar</span>
+          
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="display:inline-flex;border-radius:999px;box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--p-work);flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">O</div></span></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">Ops Team</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">Deploy window moved to Thursday</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="display:inline-flex;border-radius:999px;box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--p-gmail);flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">হ</div></span></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">হিসাব বিভাগ</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">চালান ৪২ — ধন্যবাদ</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:transparent;
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="display:inline-flex;border-radius:999px;box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--p-outlook);flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div></span></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:400">Anna Bergström</span>
+            
+            <span class="truncate" style="flex:1;font-weight:400">Invoice 2418 — payment terms</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div></div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Works</span>
+            <span style="color:var(--ink-2)">Ties the mailbox to the person, and leaves the row edge clean.</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Costs</span>
+            <span style="color:var(--ink-2)">Thin ring at 26px; hard to tell apart in dark mode or at a glance.</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;border:1px solid var(--line);
+                  border-radius:10px;background:var(--panel);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px 12px;
+                    border-bottom:1px solid var(--line)">
+          <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;
+                       border-radius:6px;background:var(--panel-2);font-size:12px;font-weight:600;
+                       color:var(--ink-2);flex:0 0 auto">C</span>
+          <span style="font-weight:600">Text badge (what the app does today)</span>
+          
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">O</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">Ops Team</span>
+            <span style="flex:0 0 auto;padding:1px 6px;border-radius:4px;background:var(--p-work);color:#fff;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Work</span>
+            <span class="truncate" style="flex:1;font-weight:600">Deploy window moved to Thursday</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">হ</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">হিসাব বিভাগ</span>
+            <span style="flex:0 0 auto;padding:1px 6px;border-radius:4px;background:var(--p-gmail);color:#fff;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Old Gmail</span>
+            <span class="truncate" style="flex:1;font-weight:600">চালান ৪২ — ধন্যবাদ</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:transparent;
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--ink-3);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:400">Anna Bergström</span>
+            <span style="flex:0 0 auto;padding:1px 6px;border-radius:4px;background:var(--p-outlook);color:#fff;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Personal</span>
+            <span class="truncate" style="flex:1;font-weight:400">Invoice 2418 — payment terms</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div></div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Works</span>
+            <span style="color:var(--ink-2)">Unambiguous — it says the mailbox name outright.</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Costs</span>
+            <span style="color:var(--ink-2)">Eats subject width on every row and turns to visual noise past ~30 rows.</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;border:1px solid var(--line);
+                  border-radius:10px;background:var(--panel);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px 12px;
+                    border-bottom:1px solid var(--line)">
+          <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;
+                       border-radius:6px;background:var(--panel-2);font-size:12px;font-weight:600;
+                       color:var(--ink-2);flex:0 0 auto">D</span>
+          <span style="font-weight:600">Dot before the sender</span>
+          
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="width:7px;height:7px;border-radius:999px;background:var(--p-work);flex:0 0 auto"></span><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-work);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">O</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">Ops Team</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">Deploy window moved to Thursday</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:var(--panel);
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="width:7px;height:7px;border-radius:999px;background:var(--p-gmail);flex:0 0 auto"></span><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-gmail);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">হ</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:600">হিসাব বিভাগ</span>
+            
+            <span class="truncate" style="flex:1;font-weight:600">চালান ৪২ — ধন্যবাদ</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 0;
+                      border-bottom:1px solid var(--line);background:transparent;
+                      ">
+            <span style="padding-left:12px;display:flex;
+                         align-items:center;gap:9px;flex:0 0 auto"><span style="width:7px;height:7px;border-radius:999px;background:var(--p-outlook);flex:0 0 auto"></span><div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div></span>
+            <span class="truncate" style="width:116px;flex:0 0 auto;font-weight:400">Anna Bergström</span>
+            
+            <span class="truncate" style="flex:1;font-weight:400">Invoice 2418 — payment terms</span>
+            <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21</span>
+          </div></div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Works</span>
+            <span style="color:var(--ink-2)">Quiet, cheap, familiar from calendar apps.</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:12.5px">
+            <span style="color:var(--ink-3);width:44px;flex:0 0 auto">Costs</span>
+            <span style="color:var(--ink-2)">One more thing in the busiest part of the row, and easy to confuse with the unread dot.</span>
+          </div>
+        </div>
+      </div></div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"Theme"},"$preview":{"width":1140,"height":660}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.dark ? 'dark' : '' };
+  }
+}
+</script>
+</body>
+</html>

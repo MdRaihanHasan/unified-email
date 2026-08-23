@@ -1,0 +1,39 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Desktop" },
+    { "id": "page-2", "name": "Mobile & mailbox options" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",        "x": 0,    "y": 0,    "w": 1440, "h": 900, "page": "page-1", "title": "Inbox — row hovered" },
+    { "file": "Selection.dc.html",   "x": 1560, "y": 0,    "w": 1440, "h": 900, "page": "page-1", "title": "Multi-select — bulk actions" },
+    { "file": "Thread.dc.html",      "x": 0,    "y": 1100, "w": 1440, "h": 900, "page": "page-1", "title": "Thread — inline reply" },
+    { "file": "Composer.dc.html",    "x": 1560, "y": 1100, "w": 1440, "h": 900, "page": "page-1", "title": "Floating composer" },
+
+    { "file": "Mobile.dc.html",         "x": 0,    "y": 0, "w": 390,  "h": 844, "page": "page-2", "title": "Phone — inbox" },
+    { "file": "MobileDrawer.dc.html",   "x": 510,  "y": 0, "w": 390,  "h": 844, "page": "page-2", "title": "Phone — drawer" },
+    { "file": "AccountOptions.dc.html", "x": 1020, "y": 0, "w": 1140, "h": 660, "page": "page-2", "title": "Which mailbox? — four options" }
+  ],
+  "annotations": [
+    {
+      "id": "split-pane",
+      "x": 0, "y": -190, "w": 420, "page": "page-1",
+      "text": "Split pane, not a separate page.\n\nToday every open is a navigation and every back is another. A reading pane on the right lets you walk the list with the keyboard and never leave the screen — the single biggest change here."
+    },
+    {
+      "id": "keyboard",
+      "x": 460, "y": -190, "w": 400, "page": "page-1",
+      "text": "Still missing: keyboard.\n\nNothing on these artboards shows it, but j/k to move, e to archive, r to reply and / to search matter more day to day than any of the visuals. Worth doing first."
+    },
+    {
+      "id": "no-google",
+      "x": 900, "y": -190, "w": 420, "page": "page-1",
+      "text": "Conventions, not Gmail's look.\n\nWide search bar, compose pill, dense rows, hover actions, floating composer — shared mail-client anatomy. The type, colour and spacing are your app's own tokens: Instrument Sans, the stone scale, sky accent, 6px radii."
+    },
+    {
+      "id": "mobile-note",
+      "x": 0, "y": -170, "w": 420, "page": "page-2",
+      "text": "The phone case is currently broken, not just unstyled.\n\nThe sidebar is hidden below md with nothing in its place, so on a phone there is no compose, no view switcher and no account switcher at all. Drawer plus a compose button fixes it."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

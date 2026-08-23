@@ -1,0 +1,510 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent); text-decoration: underline; }
+    * { box-sizing: border-box; }
+
+    .app {
+      --bg: oklch(98.5% .001 106.423);
+      --panel: #ffffff;
+      --panel-2: oklch(97% .001 106.424);
+      --line: oklch(92.3% .003 48.717);
+      --ink: oklch(21.6% .006 56.043);
+      --ink-2: oklch(44.4% .011 73.639);
+      --ink-3: oklch(70.9% .01 56.259);
+      --accent: oklch(58.8% .158 241.966);
+      --accent-soft: oklch(96.5% .022 240);
+      --star: oklch(76.9% .188 70.08);
+      --hover: oklch(97% .001 106.424);
+      --sel: oklch(96.5% .022 240);
+      --shadow: 0 1px 2px oklch(0% 0 0 / .07), 0 10px 28px oklch(0% 0 0 / .10);
+      --p-work: oklch(58% .17 25);
+      --p-gmail: oklch(62% .15 75);
+      --p-outlook: oklch(56% .17 295);
+      font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app.dark {
+      --bg: oklch(14.7% .004 49.25);
+      --panel: oklch(21.6% .006 56.043);
+      --panel-2: oklch(26.8% .007 34.298);
+      --line: oklch(26.8% .007 34.298);
+      --ink: oklch(97% .001 106.424);
+      --ink-2: oklch(70.9% .01 56.259);
+      --ink-3: oklch(55.3% .013 58.071);
+      --accent: oklch(74.6% .16 232.661);
+      --accent-soft: oklch(29.3% .066 243.157);
+      --hover: oklch(26.8% .007 34.298);
+      --sel: oklch(29.3% .066 243.157);
+      --shadow: 0 1px 2px oklch(0% 0 0 / .5), 0 10px 28px oklch(0% 0 0 / .6);
+      --p-work: oklch(68% .17 25);
+      --p-gmail: oklch(74% .15 75);
+      --p-outlook: oklch(68% .17 295);
+    }
+
+    .ico { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .ico-s { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .iconbtn { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; color: var(--ink-2); background: none; border: 0; }
+    .iconbtn:hover { background: var(--hover); }
+  </style>
+</helmet>
+
+<div class="app {{theme}}" style="width:1440px;height:900px;display:flex;
+     flex-direction:column;background:var(--bg);color:var(--ink);overflow:hidden">
+
+  <header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;
+                 padding:0 12px 0 8px;background:var(--panel);border-bottom:1px solid var(--line)">
+    <button type="button" title="Menu" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px;color:currentColor;"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div style="display:flex;align-items:baseline;gap:7px;width:182px;flex:0 0 auto">
+      <span style="font-size:15px;font-weight:600;letter-spacing:-.01em">Unified</span>
+      <span style="font-size:15px;font-weight:400;color:var(--ink-3)">mail</span>
+    </div>
+
+    <div style="flex:1;max-width:720px;display:flex;align-items:center;gap:10px;height:40px;
+                padding:0 14px;border-radius:999px;background:var(--panel-2);
+                border:1px solid transparent">
+      <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px;color:var(--ink-2);"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+      <span style="color:var(--ink-3)">Search all mailboxes</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:var(--ink-3);font-size:12px">
+        <kbd style="padding:1px 5px;border:1px solid var(--line);border-radius:4px;font-family:inherit">/</kbd>
+      </span>
+    </div>
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:2px">
+      <button type="button" title="Sync now" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px;color:currentColor;"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg></button>
+      <button type="button" title="Settings" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px;color:currentColor;"><circle cx="12" cy="12" r="3"/><path d="M12 3v2m0 14v2M5 12H3m18 0h-2M6.3 6.3 4.9 4.9m14.2 14.2-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg></button>
+      <div style="width:30px;height:30px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-size:12px;font-weight:600;letter-spacing:.01em">R</div>
+    </div>
+  </header>
+  <div style="flex:1;display:flex;min-height:0;position:relative">
+
+    <aside style="width:240px;flex:0 0 auto;display:flex;flex-direction:column;
+                  padding:12px 8px 10px;background:var(--panel);border-right:1px solid var(--line)">
+      <button type="button" style="display:flex;align-items:center;justify-content:center;gap:9px;
+              height:42px;margin:0 4px 14px;border:0;border-radius:999px;background:var(--ink);
+              color:var(--panel);font-family:inherit;font-size:14px;font-weight:600;
+              box-shadow:var(--shadow)">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M5 19h3l10-10-3-3L5 16z"/></svg> Compose
+      </button>
+      
+      <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px 0 11px;
+                  border-radius:0 999px 999px 0;
+                  background:var(--sel);
+                  color:var(--accent);
+                  font-weight:600">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M4 13 6.5 5h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
+        <span class="truncate">Inbox</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:600">3</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px 0 11px;
+                  border-radius:0 999px 999px 0;
+                  background:transparent;
+                  color:var(--ink-2);
+                  font-weight:400">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M4 10v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9l-8-5z"/><path d="M4 10l8 5 8-5"/></svg>
+        <span class="truncate">Unread</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:600">3</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px 0 11px;
+                  border-radius:0 999px 999px 0;
+                  background:transparent;
+                  color:var(--ink-2);
+                  font-weight:400">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+        <span class="truncate">Starred</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:600">2</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px 0 11px;
+                  border-radius:0 999px 999px 0;
+                  background:transparent;
+                  color:var(--ink-2);
+                  font-weight:400">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M4 12l16-7-7 16-2.5-6.5z"/></svg>
+        <span class="truncate">Sent</span>
+        
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px 0 11px;
+                  border-radius:0 999px 999px 0;
+                  background:transparent;
+                  color:var(--ink-2);
+                  font-weight:400">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 13h4"/></svg>
+        <span class="truncate">All mail</span>
+        
+      </div>
+      <div style="height:1px;background:var(--line);margin:12px 12px 10px"></div>
+      <div style="padding:0 12px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;
+                  text-transform:uppercase;color:var(--ink-3)">Mailboxes</div>
+      <div style="display:flex;align-items:center;gap:12px;height:32px;padding:0 12px 0 11px;
+                  color:var(--accent);font-weight:600">
+        <span style="width:8px;height:8px;border-radius:999px;margin-left:5px;
+                     background:linear-gradient(135deg,var(--p-work) 0 33%,var(--p-gmail) 33% 66%,var(--p-outlook) 66%)"></span>
+        <span class="truncate">All mailboxes</span>
+      </div>
+      
+      <div style="display:flex;align-items:center;gap:12px;height:32px;padding:0 12px 0 11px;
+                  color:var(--ink-2)">
+        <span style="width:8px;height:8px;border-radius:999px;background:var(--p-work);
+                     margin-left:5px;flex:0 0 auto"></span>
+        <span class="truncate">Work</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:32px;padding:0 12px 0 11px;
+                  color:var(--ink-2)">
+        <span style="width:8px;height:8px;border-radius:999px;background:var(--p-gmail);
+                     margin-left:5px;flex:0 0 auto"></span>
+        <span class="truncate">Old Gmail</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;height:32px;padding:0 12px 0 11px;
+                  color:var(--ink-2)">
+        <span style="width:8px;height:8px;border-radius:999px;background:var(--p-outlook);
+                     margin-left:5px;flex:0 0 auto"></span>
+        <span class="truncate">Personal</span>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:8px 12px 0;
+                  font-size:12px;color:var(--ink-3)">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--p-gmail);"><path d="M5 12.5 10 17l9-10"/></svg> <span>Synced 40s ago</span>
+      </div>
+    </aside>
+
+      <section style="width:420px;flex:0 0 auto;display:flex;flex-direction:column;
+                      background:var(--bg);border-right:1px solid var(--line);overflow:hidden">
+        
+        <div style="height:44px;flex:0 0 auto;display:flex;align-items:center;gap:2px;
+                    padding:0 8px 0 15px;border-bottom:1px solid var(--line)">
+          <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);
+                       margin-right:8px;flex:0 0 auto"></span>
+          <button type="button" title="Sync" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg></button><button type="button" title="More" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><circle cx="12" cy="5.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18.5" r="1.3"/></svg></button>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-3)">1–7 of 7</span>
+          <button type="button" title="Newer" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M14 7l-5 5 5 5"/></svg></button>
+          <span style="transform:rotate(180deg);display:flex"><button type="button" title="Older" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M14 7l-5 5 5 5"/></svg></button></span>
+        </div>
+        <div style="flex:1;min-height:0">
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:var(--panel);
+                    border-left:3px solid var(--p-work)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-work);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">O</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:600;color:var(--ink)">Ops Team</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:600;color:var(--ink)">Deploy window moved to Thursday</span>
+            
+            <span style="color:var(--ink-3)"> — Moving tonight&#39;s release to Thursday 22:00 so the migration lands off-peak.</span>
+          </span>
+          
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:600;flex:0 0 auto">5:26 PM</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:transparent;
+                    border-left:3px solid var(--p-work)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-work);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">P</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:400;color:var(--ink)">Priya Raman</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:400;color:var(--ink)">Q3 roadmap review — agenda</span>
+            
+            <span style="color:var(--ink-3)"> — Draft agenda attached. Two open questions on the billing rework.</span>
+          </span>
+          <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-3);"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg>
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:400;flex:0 0 auto">12:26 PM</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:var(--panel);
+                    border-left:3px solid var(--p-outlook)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--star);fill:var(--star)"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:600;color:var(--ink)">Anna Bergström</span>
+          <span style="width:5px;height:5px;border-radius:999px;background:var(--p-work);flex:0 0 auto"></span>
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:600;color:var(--ink)">Invoice 2418 — payment terms</span>
+            <span style="color:var(--ink-3);font-size:12px;font-weight:600"> 2</span>
+            <span style="color:var(--ink-3)"> — Forwarding to your work address as well, in case that is easier.</span>
+          </span>
+          <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-3);"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg>
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:600;flex:0 0 auto">Aug 21</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:transparent;
+                    border-left:3px solid var(--p-gmail)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-gmail);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">S</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:400;color:var(--ink)">Shop</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:400;color:var(--ink)">Your order has shipped</span>
+            
+            <span style="color:var(--ink-3)"> — Tracking number 4188-22 — expected Tuesday.</span>
+          </span>
+          
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:400;flex:0 0 auto">Aug 21</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:var(--panel);
+                    border-left:3px solid var(--p-gmail)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-gmail);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">হ</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:600;color:var(--ink)">হিসাব বিভাগ</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:600;color:var(--ink)">চালান ৪২ — ধন্যবাদ</span>
+            
+            <span style="color:var(--ink-3)"> — গত মাসের চালান পরিশোধিত হয়েছে। রসিদ সংযুক্ত করা হলো।</span>
+          </span>
+          <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-3);"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg>
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:600;flex:0 0 auto">Aug 21</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:transparent;
+                    border-left:3px solid var(--p-outlook)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--star);fill:var(--star)"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">R</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:400;color:var(--ink)">Registrar</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:400;color:var(--ink)">Renewal reminder: domain bixcel.com.au</span>
+            
+            <span style="color:var(--ink-3)"> — Auto-renew is on. Nothing to do unless you want to change plan.</span>
+          </span>
+          
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:400;flex:0 0 auto">Aug 20</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 8px 0 0;
+                    border-bottom:1px solid var(--line);background:transparent;
+                    border-left:3px solid var(--p-gmail)">
+          <div style="display:flex;align-items:center;gap:9px;padding-left:9px;flex:0 0 auto">
+            <span style="width:16px;height:16px;border-radius:3px;border:1.6px solid var(--ink-3);flex:0 0 auto"></span><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-gmail);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">S</div>
+          <span class="truncate" style="width:132px;flex:0 0 auto;font-weight:400;color:var(--ink)">Sam</span>
+          
+          <span class="truncate" style="flex:1;color:var(--ink-2)">
+            <span style="font-weight:400;color:var(--ink)">Re: Weekend plans</span>
+            <span style="color:var(--ink-3);font-size:12px;font-weight:600"> 4</span>
+            <span style="color:var(--ink-3)"> — Saturday works. Shall we say eleven at the usual place?</span>
+          </span>
+          
+          <span style="margin-left:auto;width:56px;text-align:right;font-size:12px;
+             color:var(--ink-2);font-weight:400;flex:0 0 auto">Aug 19</span>
+        </div></div>
+      </section>
+
+      <section style="width:780px;flex:1;display:flex;flex-direction:column;
+                      background:var(--panel);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 20px 12px;
+                    border-bottom:1px solid var(--line);flex:0 0 auto">
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:9px">
+              <h1 style="margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em"
+                  class="truncate">Invoice 2418 — payment terms</h1>
+              <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">2 messages</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:3px;font-size:12px;
+                        color:var(--ink-3)">
+              <span style="display:inline-flex;align-items:center;gap:5px">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--p-outlook)"></span>Personal
+              </span>
+              <svg viewBox="0 0 24 24" class="ico-s" style="width:12px;height:12px;color:var(--ink-3);"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="display:inline-flex;align-items:center;gap:5px">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--p-work)"></span>Work
+              </span>
+              <span style="color:var(--ink-3)">— stitched across two mailboxes</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:1px;flex:0 0 auto">
+            <button type="button" title="Star" class="iconbtn" style="color:var(--star)"><svg viewBox="0 0 24 24" class="ico-s" style="width:19px;height:19px;color:currentColor;"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg></button><button type="button" title="Archive" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:19px;height:19px;color:currentColor;"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 13h4"/></svg></button>
+            <button type="button" title="Delete" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:19px;height:19px;color:currentColor;"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button><button type="button" title="More" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:19px;height:19px;color:currentColor;"><circle cx="12" cy="5.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18.5" r="1.3"/></svg></button>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden">
+          
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 20px;
+                    border-bottom:1px solid var(--line)">
+          <div style="width:26px;height:26px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:11px;font-weight:600;letter-spacing:.01em">A</div>
+          <span style="font-weight:600;flex:0 0 auto">Anna Bergström</span>
+          <span class="truncate" style="flex:1;color:var(--ink-3)">Could we move to net-30 for the next quarter?</span>
+          <span style="font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 20</span>
+        </div>
+          
+        <div style="padding:16px 20px 20px">
+          <div style="display:flex;align-items:flex-start;gap:11px">
+            <div style="width:34px;height:34px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:14px;font-weight:600;letter-spacing:.01em">A</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-weight:600">Anna Bergström</span>
+                <span style="font-size:12px;color:var(--ink-3)">anna@client.test</span>
+                <span style="margin-left:auto;font-size:12px;color:var(--ink-3);flex:0 0 auto">Aug 21, 8:44 PM</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-3);margin-top:2px">
+                <span>to me@company.com</span>
+                <span style="width:1px;height:11px;background:var(--line)"></span>
+                <span style="display:inline-flex;align-items:center;gap:5px">
+                  <span style="width:7px;height:7px;border-radius:999px;background:var(--p-work)"></span>Work
+                </span>
+              </div>
+            </div>
+            <div style="display:flex;gap:1px;flex:0 0 auto">
+              <button type="button" title="Star" class="iconbtn" style="color:var(--star)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="m12 4 2.5 5.3 5.5.7-4 3.9 1 5.6L12 16.8 7 19.5l1-5.6-4-3.9 5.5-.7z"/></svg></button><button type="button" title="Reply" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a6 6 0 0 1 6 6v1"/></svg></button><button type="button" title="More" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><circle cx="12" cy="5.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18.5" r="1.3"/></svg></button>
+            </div>
+          </div>
+
+          <div style="margin:16px 0 0 45px">
+            
+          <div style="display:flex;align-items:center;gap:9px;margin:0 0 16px;padding:8px 12px;
+                      border:1px solid var(--line);border-radius:6px;background:var(--panel-2);
+                      font-size:12px">
+            <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-2);"><path d="M12 4 3 20h18z"/><path d="M12 10v4M12 17v.5"/></svg>
+            <span style="color:var(--ink-2)">1 remote image blocked — loading it tells the sender you opened this.</span>
+            <button type="button" style="margin-left:auto;border:0;background:none;padding:0;
+                    color:var(--accent);font-family:inherit;font-size:12px;font-weight:600">Show images</button>
+          </div>
+            <p style="margin:0 0 12px">Forwarding to your work address as well, in case that is easier.</p>
+            <blockquote style="margin:0 0 16px;padding-left:14px;border-left:2px solid var(--line);
+                              color:var(--ink-2)">
+              <p style="margin:0 0 10px">Could we move to <strong style="color:var(--ink)">net-30</strong>
+                 for the next quarter? Our finance team is reworking the schedule.</p>
+              <p style="margin:0">Attached is the current statement.</p>
+            </blockquote>
+
+            <div style="display:flex;align-items:center;gap:9px;width:fit-content;padding:7px 11px;
+                        border:1px solid var(--line);border-radius:6px;background:var(--panel-2)">
+              <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-2);"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg>
+              <span style="font-size:13px;font-weight:500">statement-2418.pdf</span>
+              <span style="font-size:12px;color:var(--ink-3)">180 KB</span>
+            </div>
+
+            
+            <div style="display:flex;gap:8px;margin-top:20px">
+              <button type="button" style="display:flex;align-items:center;gap:7px;
+        height:34px;padding:0 15px;border:1px solid var(--line);border-radius:999px;
+        background:var(--panel);color:var(--ink);font-family:inherit;font-size:13px;font-weight:500">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a6 6 0 0 1 6 6v1"/></svg> Reply</button><button type="button" style="display:flex;align-items:center;gap:7px;
+        height:34px;padding:0 15px;border:1px solid var(--line);border-radius:999px;
+        background:var(--panel);color:var(--ink);font-family:inherit;font-size:13px;font-weight:500">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M8 7 3 12l5 5"/><path d="M13 7l-5 5 5 5"/><path d="M8 12h7a5 5 0 0 1 5 5v1"/></svg> Reply all</button><button type="button" style="display:flex;align-items:center;gap:7px;
+        height:34px;padding:0 15px;border:1px solid var(--line);border-radius:999px;
+        background:var(--panel);color:var(--ink);font-family:inherit;font-size:13px;font-weight:500">
+        <svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M15 7l5 5-5 5"/><path d="M20 12h-9a6 6 0 0 0-6 6v1"/></svg> Forward</button>
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+    <div style="position:absolute;right:20px;bottom:0;width:600px;height:552px;
+                display:flex;flex-direction:column;background:var(--panel);
+                border:1px solid var(--line);border-radius:10px 10px 0 0;
+                box-shadow:var(--shadow);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 8px 0 15px;
+                  background:var(--panel-2);border-bottom:1px solid var(--line)">
+        <span style="font-size:13px;font-weight:600">New message</span>
+        <span style="margin-left:auto;display:flex;gap:1px">
+          <button type="button" title="Minimise" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M6 12h12"/></svg></button><button type="button" title="Full screen" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M9 5H5v4M15 19h4v-4"/></svg></button>
+          <button type="button" title="Close" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </span>
+      </div>
+
+      
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 15px;
+                    border-bottom:1px solid var(--line)">
+          <span style="width:34px;flex:0 0 auto;font-size:12px;color:var(--ink-3)">From</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px"><span style="width:8px;height:8px;border-radius:999px;background:var(--p-work)"></span> me@company.com</span><span style="margin-left:auto"><svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:var(--ink-3);"><path d="M7 10l5 5 5-5"/></svg></span>
+        </div>
+      
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 15px;
+                    border-bottom:1px solid var(--line)">
+          <span style="width:34px;flex:0 0 auto;font-size:12px;color:var(--ink-3)">To</span>
+          <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex:1"><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 3px;border-radius:999px;background:var(--panel-2);font-size:12.5px"><div style="width:18px;height:18px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-outlook);color:#fff;font-size:7px;font-weight:600;letter-spacing:.01em">A</div><span>Anna Bergström</span><span style="color:var(--ink-3);padding-right:5px">&#215;</span></span><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 3px;border-radius:999px;background:var(--panel-2);font-size:12.5px"><div style="width:18px;height:18px;border-radius:999px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--p-work);color:#fff;font-size:7px;font-weight:600;letter-spacing:.01em">B</div><span>Bob Ek</span><span style="color:var(--ink-3);padding-right:5px">&#215;</span></span><span style="color:var(--ink-3);font-size:13px">Add another&#8230;</span></span><span style="margin-left:auto;font-size:12px;color:var(--accent);font-weight:600">Cc Bcc</span>
+        </div>
+      
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 15px;
+                    border-bottom:1px solid var(--line)">
+          <span style="width:34px;flex:0 0 auto;font-size:12px;color:var(--ink-3)">Subj</span>
+          <span style="font-size:13px">Statement 2418 &#8212; signed copy</span>
+        </div>
+
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:1px;padding:5px 10px;
+                    border-bottom:1px solid var(--line)">
+          <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;font-weight:700">B</span><span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;font-style:italic">I</span>
+          <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;text-decoration:line-through">S</span>
+          <span style="width:1px;height:18px;background:var(--line);margin:0 6px"></span>
+          <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;">&#8220;&#8221;</span><span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;font-size:15px">&#8226;</span><span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;color:var(--ink-2);font-size:13px;font-size:12px">1.</span>
+        </div>
+
+        <div style="flex:1;padding:14px 16px;font-size:13.5px">
+          <p style="margin:0 0 11px">Hi Anna,</p>
+          <p style="margin:0 0 11px">Net-30 works for us &#8212; signed statement attached.</p>
+          <p style="margin:0">Thanks,<br>Raihan<span style="display:inline-block;width:1.5px;
+             height:16px;background:var(--accent);vertical-align:-3px;margin-left:1px"></span></p>
+        </div>
+
+        <div style="padding:0 16px 12px">
+          <div style="display:flex;align-items:center;gap:9px;width:fit-content;padding:6px 11px;
+                      border:1px solid var(--line);border-radius:6px;background:var(--panel-2)">
+            <svg viewBox="0 0 24 24" class="ico-s" style="width:15px;height:15px;color:var(--ink-2);"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg>
+            <span style="font-size:12.5px;font-weight:500">statement-2418-signed.pdf</span>
+            <span style="font-size:12px;color:var(--ink-3)">204 KB</span>
+            <span style="color:var(--ink-3);font-size:14px">&#215;</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;
+                  border-top:1px solid var(--line);background:var(--panel-2)">
+        <button type="button" style="display:flex;align-items:center;gap:8px;height:36px;
+                padding:0 19px;border:0;border-radius:999px;background:var(--ink);
+                color:var(--panel);font-family:inherit;font-size:13.5px;font-weight:600">
+          <svg viewBox="0 0 24 24" class="ico-s" style="width:16px;height:16px;color:currentColor;"><path d="M4 12l16-7-7 16-2.5-6.5z"/></svg> Send
+        </button>
+        <button type="button" title="Attach" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M16 7 9.4 13.6a2.5 2.5 0 0 0 3.5 3.5l6.6-6.6a4.5 4.5 0 0 0-6.4-6.4L6 11.3a6.5 6.5 0 0 0 9.2 9.2l4.3-4.3"/></svg></button>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--ink-3)">Draft saved</span>
+          <button type="button" title="Discard" class="iconbtn" style="color:var(--ink-2)"><svg viewBox="0 0 24 24" class="ico-s" style="width:18px;height:18px;color:currentColor;"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"Theme"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.dark ? 'dark' : '' };
+  }
+}
+</script>
+</body>
+</html>
