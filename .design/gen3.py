@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import pathlib
+HERE = pathlib.Path(__file__).resolve().parent
+import sys
+sys.path.insert(0, str(HERE))
 from _parts import ico, iconbtn, avatar, PROVIDERS, THREADS
 from gen import topbar, sidebar, mail_list
 from gen2 import frame, desktop, W, H
@@ -92,7 +95,7 @@ composer_html = f'''
       </div>
     </div>'''
 
-pathlib.Path('body-Composer.html').write_text(desktop(extra=composer_html))
+(HERE / 'body-Composer.html').write_text(desktop(extra=composer_html))
 
 # ---------------------------------------------------------------- mobile
 MW, MH = 390, 844
@@ -141,7 +144,7 @@ m_fab = f'''
 
 m_rows = ''.join(m_row(t) for t in THREADS[:6])
 
-pathlib.Path('body-Mobile.html').write_text(frame(f'''{m_header}
+(HERE / 'body-Mobile.html').write_text(frame(f'''{m_header}
   <div style="flex:1;min-height:0;position:relative;overflow:hidden">
     <div>{m_rows}</div>
 {m_fab}
@@ -188,7 +191,7 @@ drawer = f'''
       </div>
     </aside>'''
 
-pathlib.Path('body-MobileDrawer.html').write_text(frame(f'''{m_header}
+(HERE / 'body-MobileDrawer.html').write_text(frame(f'''{m_header}
   <div style="flex:1;min-height:0;position:relative;overflow:hidden">
     <div>{m_rows}</div>
 {drawer}

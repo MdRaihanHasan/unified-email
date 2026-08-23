@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import pathlib
+HERE = pathlib.Path(__file__).resolve().parent
+import sys
+sys.path.insert(0, str(HERE))
 from _parts import ico, avatar, PROVIDERS
 from gen2 import frame
 
@@ -108,5 +111,5 @@ body = frame(f'''
                 gap:18px">{cards}</div>
   </div>''', w=AW, h=AH)
 
-pathlib.Path('body-AccountOptions.html').write_text(body)
+(HERE / 'body-AccountOptions.html').write_text(body)
 print('options body written')

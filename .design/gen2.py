@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import pathlib
+HERE = pathlib.Path(__file__).resolve().parent
+import sys
+sys.path.insert(0, str(HERE))
 from _parts import ico, iconbtn, avatar, PROVIDERS
 from gen import topbar, sidebar, mail_list, W, H, TOPBAR, SIDEBAR, LISTW
 
@@ -173,7 +176,7 @@ def desktop(*, hover=None, checked=(), open_index=2, reply_open=False, extra='')
 {extra}
   </div>''')
 
-pathlib.Path('body-Main.html').write_text(desktop(hover=3))
-pathlib.Path('body-Selection.html').write_text(desktop(checked=(0, 2, 4), open_index=None))
-pathlib.Path('body-Thread.html').write_text(desktop(reply_open=True))
+(HERE / 'body-Main.html').write_text(desktop(hover=3))
+(HERE / 'body-Selection.html').write_text(desktop(checked=(0, 2, 4), open_index=None))
+(HERE / 'body-Thread.html').write_text(desktop(reply_open=True))
 print('desktop bodies written')

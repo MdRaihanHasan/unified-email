@@ -2,9 +2,11 @@
 """Assemble a .dc.html artboard from the shared theme block plus a body file."""
 import sys, pathlib
 
+HERE = pathlib.Path(__file__).resolve().parent
+
 name, w, h = sys.argv[1], sys.argv[2], sys.argv[3]
-theme = pathlib.Path('_theme.html').read_text()
-body = pathlib.Path(f'body-{name}.html').read_text()
+theme = (HERE / '_theme.html').read_text()
+body = (HERE / f'body-{name}.html').read_text()
 
 props = (
     '{"dark":{"editor":"boolean","default":false,"section":"Theme"},'
@@ -32,5 +34,5 @@ class Component extends DCLogic {{
 </body>
 </html>
 '''
-pathlib.Path(f'{name}.dc.html').write_text(out)
+(HERE / f'{name}.dc.html').write_text(out)
 print(f'{name}.dc.html  {len(out)} bytes')
