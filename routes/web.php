@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('compose/{outbound}', [ComposeController::class, 'destroy'])->name('compose.destroy');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts');
+    Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
     // The callback path must match the redirect URI registered in Google Cloud
     // Console exactly, so it is spelled out here rather than nested under /oauth.

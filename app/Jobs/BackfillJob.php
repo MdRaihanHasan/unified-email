@@ -30,6 +30,10 @@ class BackfillJob implements ShouldQueue
 
     public array $backoff = [10, 30, 120, 300];
 
+    // A removed account leaves its queued jobs behind; they should vanish with it
+    // rather than land in failed_jobs complaining about a model that is gone.
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(public readonly MailAccount $account) {}
 
     public function middleware(): array

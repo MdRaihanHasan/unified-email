@@ -24,6 +24,10 @@ class SyncAccountJob implements ShouldQueue
 {
     use Queueable;
 
+    // A removed account leaves its queued jobs behind; they should vanish with it
+    // rather than land in failed_jobs complaining about a model that is gone.
+    public bool $deleteWhenMissingModels = true;
+
     public int $tries = 3;
 
     public function __construct(public readonly MailAccount $account) {}

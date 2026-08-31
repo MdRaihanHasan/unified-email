@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '../../layouts/AppLayout.vue'
 import Avatar from '../../components/Avatar.vue'
 import Icon from '../../components/Icon.vue'
@@ -11,6 +11,17 @@ const props = defineProps({
 })
 
 const accounts = computed(() => usePage().props.accounts ?? [])
+
+function removeAccount(account) {
+    const warning =
+        `Remove ${account.email}?\n\n` +
+        'Its imported mail disappears from this app. The mailbox itself is untouched — ' +
+        'reconnecting later imports everything again.'
+
+    if (confirm(warning)) {
+        router.delete(`/accounts/${account.id}`)
+    }
+}
 
 const statusStyles = {
     active: 'text-emerald-600 dark:text-emerald-400',
@@ -47,11 +58,18 @@ const statusStyles = {
                             <p class="text-xs text-stone-400">
                                 synced {{ account.last_synced_for_humans ?? 'never' }}
                             </p>
-                            <a
-                                v-if="account.status === 'auth_error'"
-                                href="/gmail/connect"
-                                class="text-xs font-semibold text-sky-600 hover:underline dark:text-sky-400"
-                            >Reconnect</a>
+                            <div class="mt-0.5 flex items-center justify-end gap-3">
+                                <a
+                                    v-if="account.status === 'auth_error'"
+                                    href="/gmail/connect"
+                                    class="text-xs font-semibold text-sky-600 hover:underline dark:text-sky-400"
+                                >Reconnect</a>
+                                <button
+                                    type="button"
+                                    class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
+                                    @click="removeAccount(account)"
+                                >Remove</button>
+                            </div>
                         </div>
                     </li>
                 </ul>
