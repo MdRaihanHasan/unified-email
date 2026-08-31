@@ -99,4 +99,24 @@ class AddressParserTest extends TestCase
 
         $this->assertCount(2, $addresses);
     }
+
+    public function test_an_rfc2047_encoded_display_name_decodes(): void
+    {
+        // The Gmail API returns headers verbatim, so any non-ASCII name arrives as
+        // an encoded-word — this is what every Bangla sender looks like undecoded.
+        $encoded = '=?UTF-8?B?'.base64_encode('রায়হান হাসান').'?= <raihan@example.com>';
+
+        $address = AddressParser::first($encoded);
+
+        $this->assertSame('raihan@example.com', $address->address);
+        $this->assertSame('রায়হান হাসান', $address->name);
+    }
+
+    public function test_a_q_encoded_latin1_name_decodes(): void
+    {
+        $address = AddressParser::first('=?ISO-8859-1?Q?Andr=E9?= <andre@example.com>');
+
+        $this->assertSame('andre@example.com', $address->address);
+        $this->assertSame('André', $address->name);
+    }
 }

@@ -320,4 +320,15 @@ class GmailMessageParserTest extends TestCase
         $this->assertArrayHasKey('list-id', $parsed->headers);
         $this->assertArrayNotHasKey('x-some-vendor-trace', $parsed->headers);
     }
+
+    public function test_an_rfc2047_encoded_subject_decodes(): void
+    {
+        $subject = '=?UTF-8?B?'.base64_encode('চালান ৪২ — ধন্যবাদ').'?=';
+
+        $remote = $this->parser->parse($this->message([
+            'payload' => ['headers' => $this->headers(['Subject' => $subject])],
+        ]));
+
+        $this->assertSame('চালান ৪২ — ধন্যবাদ', $remote->subject);
+    }
 }

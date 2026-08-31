@@ -23,16 +23,29 @@ use Mews\Purifier\Facades\Purifier;
 class HtmlSanitizer
 {
     private const CONFIG = [
-        'HTML.Allowed' => 'p,br,hr,b,strong,i,em,u,s,strike,sub,sup,'
-            .'a[href|title],ul,ol,li,dl,dt,dd,blockquote,pre,code,'
-            .'h1,h2,h3,h4,h5,h6,'
-            .'img[src|alt|width|height],'
-            .'table[border|cellpadding|cellspacing],thead,tbody,tfoot,'
-            .'tr,td[colspan|rowspan|align|valign],th[colspan|rowspan|align|valign],'
-            .'div,span,font[color|face]',
+        // style is allowed almost everywhere because real email layout IS inline
+        // style; CSS.AllowedProperties below decides which declarations survive
+        // inside it. Without the attribute, every newsletter collapses to bare
+        // stacked text — the allowlist below is what "renders like an email" means.
+        'HTML.Allowed' => 'p[style],br,hr,b[style],strong[style],i[style],em[style],u[style],s[style],strike[style],sub,sup,'
+            .'a[href|title|style],ul[style],ol[style],li[style],dl,dt,dd,blockquote[style],pre[style],code,'
+            .'h1[style],h2[style],h3[style],h4[style],h5[style],h6[style],'
+            .'img[src|alt|width|height|style],'
+            .'table[border|cellpadding|cellspacing|width|align|bgcolor|style],thead,tbody,tfoot,'
+            .'tr[align|valign|bgcolor|style],td[colspan|rowspan|align|valign|width|height|bgcolor|style],'
+            .'th[colspan|rowspan|align|valign|width|height|bgcolor|style],'
+            .'div[style],span[style],font[color|face|size|style],center,small,big',
+        // background and *-image properties stay out deliberately: a url() inside
+        // CSS is a remote fetch the <img> blocker below never sees — a tracking
+        // pixel with no consent switch.
         'CSS.AllowedProperties' => 'color,background-color,font-weight,font-style,'
-            .'font-size,font-family,text-decoration,text-align,'
-            .'margin,margin-top,margin-bottom,padding,border,border-collapse,width',
+            .'font-size,font-family,text-decoration,text-align,text-transform,'
+            .'letter-spacing,line-height,vertical-align,'
+            .'margin,margin-top,margin-right,margin-bottom,margin-left,'
+            .'padding,padding-top,padding-right,padding-bottom,padding-left,'
+            .'border,border-top,border-right,border-bottom,border-left,'
+            .'border-color,border-style,border-width,border-collapse,border-spacing,'
+            .'width,height,max-width',
         'HTML.TargetBlank' => true,
         'HTML.Nofollow' => true,
         'AutoFormat.RemoveEmpty' => false,

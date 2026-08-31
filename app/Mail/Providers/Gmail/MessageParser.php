@@ -48,7 +48,7 @@ class MessageParser
             cc: AddressParser::list($this->header($headers, 'cc')),
             bcc: AddressParser::list($this->header($headers, 'bcc')),
             replyTo: AddressParser::list($this->header($headers, 'reply-to')),
-            subject: $this->header($headers, 'subject'),
+            subject: $this->decodeHeader($this->header($headers, 'subject')),
             snippet: $this->snippet($message),
             bodyHtml: $html,
             bodyText: $text,
@@ -95,6 +95,23 @@ class MessageParser
         $value = $headers[$name] ?? null;
 
         return blank($value) ? null : $value;
+    }
+
+    /**
+     * The Gmail API hands headers back verbatim, so a non-ASCII Subject arrives as
+     * RFC 2047 encoded-words ("=?UTF-8?B?4Kaq4Kaw...?=") — which is exactly what a
+     * Bangla subject line looks like without this. Decoding failures keep the raw
+     * value: a garbled header beats a lost one.
+     */
+    private function decodeHeader(?string $value): ?string
+    {
+        if ($value === null || ! str_contains($value, '=?')) {
+            return $value;
+        }
+
+        $decoded = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+
+        return $decoded === false || $decoded === '' ? $value : $decoded;
     }
 
     /** @return list<string> */

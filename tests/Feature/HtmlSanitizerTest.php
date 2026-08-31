@@ -184,4 +184,30 @@ class HtmlSanitizerTest extends TestCase
         $this->assertStringContainsString('চালান ৪২', $result['html']);
         $this->assertStringContainsString('ধন্যবাদ', $result['html']);
     }
+
+    public function test_inline_styles_survive_with_safe_properties(): void
+    {
+        // Real email layout IS inline style; stripping the attribute wholesale is
+        // why every newsletter used to collapse into bare stacked text.
+        $result = $this->sanitizer->sanitize('<p style="color:#336699; font-size:14px;">Styled</p>');
+
+        $this->assertStringContainsString('style=', $result['html']);
+        $this->assertStringContainsString('color', $result['html']);
+        $this->assertStringContainsString('font-size', $result['html']);
+    }
+
+    public function test_url_bearing_and_unlisted_css_is_stripped(): void
+    {
+        // background-image would fetch a remote URL the <img> blocker never sees —
+        // a tracking pixel with no consent switch — and position could pull content
+        // out of the message container.
+        $result = $this->sanitizer->sanitize(
+            '<div style="background-image:url(https://tracker.test/p.gif); position:fixed; color:red;">x</div>',
+        );
+
+        $this->assertStringNotContainsString('background-image', $result['html']);
+        $this->assertStringNotContainsString('tracker.test', $result['html']);
+        $this->assertStringNotContainsString('position', $result['html']);
+        $this->assertStringContainsString('color', $result['html']);
+    }
 }

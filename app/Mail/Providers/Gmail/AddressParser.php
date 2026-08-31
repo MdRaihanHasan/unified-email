@@ -56,7 +56,7 @@ class AddressParser
         try {
             $parsed = SymfonyAddress::create($token);
 
-            return new Address($parsed->getAddress(), $parsed->getName() !== '' ? $parsed->getName() : null);
+            return new Address($parsed->getAddress(), self::decodeName($parsed->getName()));
         } catch (Throwable) {
             // Any parse failure falls through, not just an RFC one: Address::create()
             // raises InvalidArgumentException for a string it cannot read at all.
@@ -67,7 +67,7 @@ class AddressParser
         if (preg_match('/<([^>]+)>/', $token, $matches) === 1) {
             $name = trim(str_replace($matches[0], '', $token), " \t\"'");
 
-            return new Address(trim($matches[1]), $name !== '' ? $name : null);
+            return new Address(trim($matches[1]), self::decodeName($name));
         }
 
         if (preg_match('/[^\s<>,;"]+@[^\s<>,;"]+/', $token, $matches) === 1) {
@@ -75,6 +75,29 @@ class AddressParser
         }
 
         return null;
+    }
+
+    /**
+     * Display names arrive RFC 2047-encoded for anything non-ASCII — a sender named
+     * in Bangla reads as "=?UTF-8?B?...?=" until decoded. Encoded words never
+     * contain commas, so decoding after the comma split is safe; decoding before it
+     * would re-introduce the separators the split protects against.
+     */
+    private static function decodeName(?string $name): ?string
+    {
+        if ($name === null || $name === '') {
+            return null;
+        }
+
+        if (str_contains($name, '=?')) {
+            $decoded = @iconv_mime_decode($name, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+
+            if ($decoded !== false && $decoded !== '') {
+                $name = $decoded;
+            }
+        }
+
+        return $name === '' ? null : $name;
     }
 
     /**
