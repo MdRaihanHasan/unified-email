@@ -76,7 +76,14 @@ const people = computed(() => {
              after three words and left no room for the snippet at all. -->
         <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5">
-                <span class="truncate" :class="unread ? 'font-semibold' : ''">{{ people }}</span>
+                <!-- Unread must be unmistakable at a glance: a dot plus real weight
+                     contrast, not just a slightly different font-weight. -->
+                <span
+                    v-if="unread"
+                    class="size-1.5 shrink-0 rounded-full bg-sky-500 dark:bg-sky-400"
+                    aria-hidden="true"
+                />
+                <span class="truncate" :class="unread ? 'font-bold' : 'text-stone-600 dark:text-stone-400'">{{ people }}</span>
 
                 <span
                     v-for="provider in props.thread.providers.slice(1)"
@@ -110,7 +117,7 @@ const people = computed(() => {
                 </div>
             </div>
 
-            <div class="truncate" :class="unread ? 'font-semibold' : ''">{{ props.thread.subject }}</div>
+            <div class="truncate" :class="unread ? 'font-semibold' : 'text-stone-500 dark:text-stone-400'">{{ props.thread.subject }}</div>
 
             <div class="flex items-center gap-1.5">
                 <span class="truncate text-[0.8rem] text-stone-400">{{ props.thread.snippet }}</span>

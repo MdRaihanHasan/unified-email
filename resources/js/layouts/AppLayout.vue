@@ -51,6 +51,32 @@ function focusSearch() {
     searchInput.value?.select()
 }
 
+function syncNow() {
+    router.post('/sync', {}, { preserveScroll: true, preserveState: true })
+}
+
+// One truthful line for the whole account set. The previous version showed only
+// accounts[0], so four mailboxes were summarized by whichever had the lowest id —
+// "Synced never" beside a banner saying the import was busy.
+const syncStatus = computed(() => {
+    if (!accounts.value.length) return 'Nothing connected'
+    if (accounts.value.some((a) => a.status === 'auth_error')) return 'Reconnect needed'
+    if (accounts.value.some((a) => a.backfilling)) return 'Importing…'
+
+    const stamps = accounts.value
+        .filter((a) => a.status === 'active')
+        .map((a) => (a.last_synced_at ? new Date(a.last_synced_at).getTime() : null))
+
+    if (!stamps.length || stamps.some((t) => t === null)) return 'Synced: never'
+
+    const minutes = Math.floor((Date.now() - Math.min(...stamps)) / 60000)
+
+    if (minutes < 1) return 'Synced just now'
+    if (minutes < 60) return `Synced ${minutes}m ago`
+
+    return `Synced ${Math.floor(minutes / 60)}h ${minutes % 60}m ago`
+})
+
 // "/" focuses search from anywhere, the way every mail client does — but not while
 // the caret is already in a field, or it eats the character.
 function onKey(event) {
@@ -114,7 +140,7 @@ defineExpose({ focusSearch })
             </label>
 
             <div class="ml-auto flex shrink-0 items-center gap-0.5">
-                <IconButton name="refresh" label="Sync now" :size="19" class="hidden sm:flex" />
+                <IconButton name="refresh" label="Sync now" :size="19" class="hidden sm:flex" @click="syncNow" />
                 <IconButton name="moon" label="Light / dark" :size="19" @click="toggleTheme" />
                 <Avatar :name="user?.name ?? '?'" :size="30" class="ml-1" />
             </div>
@@ -127,10 +153,7 @@ defineExpose({ focusSearch })
                 <NavContent />
                 <div class="flex items-center gap-2 px-3 pt-3 text-xs text-stone-400">
                     <Icon name="check" :size="14" />
-                    <span v-if="accounts.length">
-                        Synced {{ accounts[0].last_synced_for_humans ?? 'never' }}
-                    </span>
-                    <span v-else>Nothing connected</span>
+                    <span>{{ syncStatus }}</span>
                 </div>
             </aside>
 

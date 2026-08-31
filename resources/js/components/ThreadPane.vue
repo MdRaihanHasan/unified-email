@@ -31,9 +31,29 @@ watch(
         const last = messages.value[messages.value.length - 1]
         expanded.value = new Set(last ? [last.id] : [])
         replyTo.value = null
+
+        // Opening a conversation reads it, the way every mail client works. The
+        // bulk action writes locally first and pushes to the provider, so the row
+        // un-bolds immediately and Gmail follows on the next poll. quiet: a flash
+        // saying "Marked 1 conversation read." on every open is noise.
+        if (messages.value.some((message) => !message.is_read)) {
+            router.post('/threads/actions', {
+                thread_ids: [thread.value.id],
+                action: 'read',
+                quiet: true,
+            }, { preserveScroll: true, preserveState: true })
+        }
     },
     { immediate: true },
 )
+
+function toggleThreadStar() {
+    router.post('/threads/actions', {
+        thread_ids: [thread.value.id],
+        action: thread.value.is_starred ? 'unstar' : 'star',
+        quiet: true,
+    }, { preserveScroll: true, preserveState: true })
+}
 
 function toggle(id) {
     const next = new Set(expanded.value)
@@ -145,6 +165,7 @@ function replyActions(message) {
                     :size="19"
                     :filled="thread.is_starred"
                     :active="thread.is_starred"
+                    @click="toggleThreadStar"
                 />
                 <IconButton name="close" label="Close" :size="19" class="hidden lg:flex" @click="emit('close')" />
             </div>

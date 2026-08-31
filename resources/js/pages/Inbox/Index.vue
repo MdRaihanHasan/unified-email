@@ -86,6 +86,10 @@ function markRead(thread, read) {
     }, { preserveScroll: true, preserveState: true })
 }
 
+function syncNow() {
+    router.post('/sync', {}, { preserveScroll: true, preserveState: true })
+}
+
 // ---- keyboard -----------------------------------------------------------
 // The thing that matters most day to day, and the reason a reading pane is worth
 // having: you can walk a mailbox without reaching for the mouse.
@@ -196,7 +200,7 @@ const title = computed(() => {
                     </template>
 
                     <template v-else>
-                        <IconButton name="refresh" label="Sync" :size="18" />
+                        <IconButton name="refresh" label="Sync" :size="18" @click="syncNow" />
                         <IconButton name="keyboard" label="Keyboard shortcuts" :size="18" @click="help = true" />
                         <span class="ml-auto text-xs text-stone-400">
                             {{ props.threads.total }} {{ props.threads.total === 1 ? 'conversation' : 'conversations' }}
