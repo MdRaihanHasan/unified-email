@@ -65,15 +65,20 @@ class BackfillJob implements ShouldQueue
 
     private function walk(MailAccount $account, MailboxProvider $driver, MessageWriter $writer): void
     {
-        if ($account->folders()->doesntExist()) {
+        // Refresh the folder list whenever a walk starts from scratch — the first
+        // connect AND every full resync. Labels created after connect must become
+        // folders, or their messages have nowhere to be filed.
+        if ($account->folders()->doesntExist() || ($account->sync_cursor ?? []) === []) {
             $writer->storeFolders($account, $driver->listFolders($account));
+        }
 
-            // Take the delta cursor BEFORE reading any message. Anything that changes
-            // during a long backfill then still shows up once incremental sync takes
-            // over; taking it afterwards would silently lose that window.
-            if (($account->sync_cursor ?? []) === []) {
-                $account->update(['sync_cursor' => $driver->currentCursor($account)->toArray()]);
-            }
+        // Take the delta cursor BEFORE reading any message, and take it on EVERY
+        // walk that starts without one — not only the first. A full resync clears
+        // the cursor but keeps the folders; capturing only on first connect left a
+        // recovered account cursorless, so every following scheduler tick triggered
+        // another full resync, forever.
+        if (($account->sync_cursor ?? []) === []) {
+            $account->update(['sync_cursor' => $driver->currentCursor($account)->toArray()]);
         }
 
         $folder = $account->folders()
@@ -106,6 +111,11 @@ class BackfillJob implements ShouldQueue
         } else {
             $folder->update(['backfill_cursor' => null, 'backfill_done_at' => now()]);
         }
+
+        // Progress heartbeat: the sidebar and the staleness banner read
+        // last_synced_at, and a long first import that never touches it reports
+        // "Synced never" for hours while mail is visibly arriving.
+        $account->update(['last_synced_at' => now()]);
 
         // Next page (or next folder) as a fresh job, so each unit of work is small
         // and independently retryable.

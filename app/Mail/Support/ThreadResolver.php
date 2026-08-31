@@ -87,6 +87,16 @@ class ThreadResolver
     /** Tier 3 — subject and participants. Same account only, bounded time window. */
     private function bySubjectHeuristic(MailAccount $account, RemoteMessage $remote): ?Thread
     {
+        // By the time tier 3 runs, the provider's own threading has already spoken:
+        // tier 2 found no sibling for this thread id, so the provider considers the
+        // message a NEW conversation. Overriding that by subject is how recurring
+        // automated mail ("Payment reminder" from the same robot every day)
+        // collapsed into one giant thread. The heuristic stays available where it
+        // belongs: providers with no native thread id, and messages without one.
+        if ($remote->providerThreadId !== null && $account->provider->hasNativeThreadId()) {
+            return null;
+        }
+
         $normalized = Thread::normalizeSubject($remote->subject);
 
         if ($normalized === '') {

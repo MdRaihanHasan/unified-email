@@ -2,6 +2,7 @@
 
 namespace App\Mail\Support;
 
+use App\Enums\FolderRole;
 use App\Mail\Data\ChangeSet;
 use App\Mail\Data\MessageUpdate;
 use App\Mail\Data\RemoteFolder;
@@ -191,19 +192,32 @@ class MessageWriter
      */
     private function syncFolders(MailAccount $account, Message $message, array $folderRemoteIds): void
     {
-        if ($folderRemoteIds === []) {
-            return;
-        }
-
+        // An empty list is a real state, not "unknown". Archiving in Gmail removes
+        // the message's last tracked label, and detaching here is the only way it
+        // ever leaves the inbox — callers express "provider did not say" as null,
+        // never as []. Skipping the empty set left archived mail in the inbox
+        // forever.
         $ids = Folder::query()
             ->where('mail_account_id', $account->id)
             ->whereIn('remote_id', $folderRemoteIds)
-            ->pluck('id')
-            ->all();
+            ->pluck('id', 'remote_id');
+
+        // A label this app has never seen — created in Gmail after connect — still
+        // has to file the message somewhere, or sync() below would silently orphan
+        // it out of every view. The row starts bare, named by its id; the next
+        // folder refresh fills in the real name.
+        foreach ($folderRemoteIds as $remoteId) {
+            if (! isset($ids[$remoteId])) {
+                $ids[$remoteId] = Folder::firstOrCreate(
+                    ['mail_account_id' => $account->id, 'remote_id' => $remoteId],
+                    ['name' => $remoteId, 'path' => $remoteId, 'role' => FolderRole::Custom, 'is_label' => true],
+                )->id;
+            }
+        }
 
         // sync() rather than attach(): for Gmail this is the only signal that a label
         // was *removed*, since a message keeps its id and just reports fewer labels.
-        $message->folders()->sync($ids);
+        $message->folders()->sync($ids->values()->all());
     }
 
     private function syncAttachments(Message $message, RemoteMessage $remote): void
