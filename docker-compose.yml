@@ -50,9 +50,14 @@ services:
       - "127.0.0.1:${APP_PORT:-8000}:80"
 
   # Backfill pages, body fetches, sends, flag pushes.
+  #
+  # No --max-time here: that flag makes the worker exit cleanly once an hour,
+  # which is only safe under a supervisor that restarts it. Compose has no
+  # restart policy on this service, so a timed exit was a permanent, silent
+  # death — sends and syncs queued forever while every container showed green.
   worker:
     <<: *app
-    command: php artisan queue:work --tries=3 --timeout=600 --sleep=1 --max-time=3600
+    command: php artisan queue:work --tries=3 --timeout=600 --sleep=1
     healthcheck:
       disable: true
 
