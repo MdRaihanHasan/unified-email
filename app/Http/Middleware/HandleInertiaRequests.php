@@ -38,6 +38,12 @@ class HandleInertiaRequests extends Middleware
                     'last_synced_for_humans' => $account->last_synced_at?->diffForHumans(),
                     'is_stale' => $account->isStale((int) config('mail_providers.sync.stale_after_minutes')),
                     'backfilling' => ! $account->hasFinishedBackfill(),
+                    // Connected but nothing has run — almost always a queue worker
+                    // that is not up, which nothing else in the UI would reveal.
+                    'import_stalled' => $account->importStalled(),
+                    // Only while importing: two extra queries per account, and
+                    // pointless once the mailbox is filled.
+                    'import_progress' => $account->hasFinishedBackfill() ? null : $account->importProgress(),
                     'last_error' => $account->last_error,
                 ])->values(),
 

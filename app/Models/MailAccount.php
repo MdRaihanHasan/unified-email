@@ -66,10 +66,63 @@ class MailAccount extends Model
     /**
      * Sync has not run recently enough. Watched by a scheduled command, because a
      * silently stalled account is the failure mode this design has to guard against.
+     *
+     * An account still doing its first import is NOT stale — it is new, and has not
+     * had a chance yet. Reporting it as behind produced two banners that contradicted
+     * each other ("still importing" beside "last synced never") on a mailbox that had
+     * just been connected. Progress there is judged by importStalled() instead.
      */
     public function isStale(int $minutes = 15): bool
     {
+        if (! $this->status->shouldSync() || ! $this->hasFinishedBackfill()) {
+            return false;
+        }
+
+        return $this->last_synced_at === null
+            || $this->last_synced_at->isBefore(now()->subMinutes($minutes));
+    }
+
+    /**
+     * The first thing BackfillJob does is record the mailbox's folders, so their
+     * absence means the job has not run at all — not that it is slow.
+     */
+    public function hasStartedImport(): bool
+    {
+        return $this->folders()->exists();
+    }
+
+    /**
+     * Connected, but nothing has run.
+     *
+     * Almost always one thing: the queue worker is not up, so the job sits in Redis
+     * forever. Worth saying out loud, because there is nothing in the UI or the logs
+     * to suggest it — the account looks connected and simply never fills.
+     */
+    public function importStalled(int $minutes = 5): bool
+    {
         return $this->status->shouldSync()
-            && ($this->last_synced_at === null || $this->last_synced_at->isBefore(now()->subMinutes($minutes)));
+            && ! $this->hasFinishedBackfill()
+            && ! $this->hasStartedImport()
+            && $this->created_at !== null
+            && $this->created_at->isBefore(now()->subMinutes($minutes));
+    }
+
+    /**
+     * How far the first import has got, so the banner can show movement rather than
+     * an indefinite "still importing".
+     *
+     * @return array{folders_done: int, folders_total: int, messages: int}
+     */
+    public function importProgress(): array
+    {
+        $folders = $this->folders()->get(['id', 'role', 'is_selectable', 'backfill_done_at']);
+
+        return [
+            'folders_done' => $folders->whereNotNull('backfill_done_at')->count(),
+            // Only the folders that will actually be walked; counting the rest makes
+            // the total look wrong and the progress look stuck.
+            'folders_total' => $folders->filter(fn (Folder $folder) => $folder->shouldBackfill())->count(),
+            'messages' => $this->messages()->count(),
+        ];
     }
 }
