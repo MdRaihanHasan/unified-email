@@ -33,8 +33,14 @@ class OutboundDraftFactory
             inReplyTo: $threading['in_reply_to'],
             references: $threading['references'],
             // Gmail files a reply onto the right conversation from threadId, and
-            // Graph from the message id it builds the reply against.
-            providerThreadId: $parent?->provider_thread_id,
+            // Graph from the message id it builds the reply against. A thread id is
+            // only meaningful inside the mailbox that issued it: replying from a
+            // different connected account with the parent's id makes Gmail reject
+            // the send, so a cross-account reply relies on the References headers
+            // alone — which is all the recipient's client uses anyway.
+            providerThreadId: $parent !== null && $parent->mail_account_id === $outbound->mail_account_id
+                ? $parent->provider_thread_id
+                : null,
             replyToProviderMessageId: $outbound->type === OutboundType::Forward
                 ? null
                 : $parent?->provider_message_id,

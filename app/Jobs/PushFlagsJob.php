@@ -39,7 +39,11 @@ class PushFlagsJob implements ShouldQueue
         public readonly array $providerMessageIds,
         public readonly FlagChange $change,
         public readonly array $previous = [],
-    ) {}
+    ) {
+        // A read/star toggle is something the user just did and is watching for;
+        // it must not queue behind an hour of backfill pages.
+        $this->onQueue('interactive');
+    }
 
     public function handle(): void
     {

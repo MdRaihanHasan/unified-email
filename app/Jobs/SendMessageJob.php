@@ -33,7 +33,12 @@ class SendMessageJob implements ShouldQueue
 
     public array $backoff = [15, 60, 300];
 
-    public function __construct(public readonly OutboundMessage $outbound) {}
+    public function __construct(public readonly OutboundMessage $outbound)
+    {
+        // User-initiated work must not wait behind a backfill: the worker drains
+        // this queue first (queue:work --queue=interactive,default).
+        $this->onQueue('interactive');
+    }
 
     /** A retry must never send the message a second time. */
     public function middleware(): array
