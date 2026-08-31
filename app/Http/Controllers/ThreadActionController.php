@@ -28,6 +28,9 @@ class ThreadActionController
             'thread_ids' => ['required', 'array', 'min:1', 'max:200'],
             'thread_ids.*' => ['integer', 'exists:threads,id'],
             'action' => ['required', Rule::in(['read', 'unread', 'star', 'unstar'])],
+            // Implicit actions (opening a thread marks it read) skip the flash:
+            // "Marked 1 conversation read." on every open is noise, not feedback.
+            'quiet' => ['sometimes', 'boolean'],
         ]);
 
         $change = match ($data['action']) {
@@ -72,6 +75,10 @@ class ThreadActionController
                 $change,
                 $previous,
             );
+        }
+
+        if ($request->boolean('quiet')) {
+            return back();
         }
 
         return back()->with('message', $this->confirmation($data['action'], count($data['thread_ids'])));

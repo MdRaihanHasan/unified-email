@@ -6,6 +6,7 @@ use App\Http\Controllers\ComposeController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\MessageFlagController;
 use App\Http\Controllers\Oauth\GoogleController;
+use App\Http\Controllers\SyncController;
 use App\Http\Controllers\ThreadActionController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,9 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('messages/{message}/flags', [MessageFlagController::class, 'update'])->name('messages.flags');
     Route::post('threads/actions', [ThreadActionController::class, 'update'])->name('threads.actions');
+
+    // Throttled: the button is a reassurance lever, not a way to hammer Gmail.
+    Route::post('sync', [SyncController::class, 'store'])->middleware('throttle:6,1')->name('sync');
 
     Route::get('compose', [ComposeController::class, 'create'])->name('compose');
     Route::get('compose/prefill', [ComposeController::class, 'prefill'])->name('compose.prefill');
