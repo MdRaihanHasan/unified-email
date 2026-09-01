@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\OutboundStatus;
 use App\Models\MailAccount;
+use App\Models\OutboundMessage;
 use App\Models\Thread;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -53,6 +55,16 @@ class HandleInertiaRequests extends Middleware
                 'inbox' => Thread::query()->inView('inbox')->where('unread_count', '>', 0)->count(),
                 'unread' => Thread::query()->where('unread_count', '>', 0)->count(),
                 'starred' => Thread::query()->where('is_starred', true)->count(),
+                // Mail trying to leave. `failed` is separate so the sidebar can
+                // shout about it — a failed send is the one state that must never
+                // be quiet.
+                'outbox' => OutboundMessage::query()->whereIn('status', [
+                    OutboundStatus::Queued, OutboundStatus::Sending, OutboundStatus::Failed,
+                ])->count(),
+                'outbox_failed' => OutboundMessage::query()
+                    ->where('status', OutboundStatus::Failed)->count(),
+                'drafts' => OutboundMessage::query()
+                    ->where('status', OutboundStatus::Draft)->count(),
             ],
 
             'flash' => [

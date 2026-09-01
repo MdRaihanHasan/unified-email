@@ -14,7 +14,6 @@ use App\Models\OutboundMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -170,8 +169,8 @@ class ComposeController
         SendMessageJob::dispatch($outbound);
 
         return $outbound->thread_id === null
-            ? redirect()->route('inbox')->with('message', 'Sending…')
-            : redirect()->route('threads.show', $outbound->thread_id)->with('message', 'Sending…');
+            ? redirect()->route('inbox')->with('message', 'Sending — track it in the Outbox until it lands in Sent.')
+            : redirect()->route('threads.show', $outbound->thread_id)->with('message', 'Sending — track it in the Outbox until it lands in Sent.');
     }
 
     public function destroy(OutboundMessage $outbound): RedirectResponse
@@ -180,13 +179,7 @@ class ComposeController
             return back()->with('message', 'That message has already been sent.');
         }
 
-        foreach ($outbound->attachments ?? [] as $attachment) {
-            if (isset($attachment['path'])) {
-                Storage::disk('local')->delete($attachment['path']);
-            }
-        }
-
-        $outbound->delete();
+        $outbound->discard();
 
         return redirect()->route('inbox');
     }

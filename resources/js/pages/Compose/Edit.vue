@@ -179,6 +179,14 @@ function size(bytes) {
                 Last send failed: {{ props.draft.error }}
             </div>
 
+            <div
+                v-else-if="props.draft.status === 'queued' || props.draft.status === 'sending'"
+                class="mb-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
+            >
+                This message is {{ props.draft.status === 'queued' ? 'queued to send' : 'sending now' }} —
+                track it in the <a href="/outbox" class="font-semibold underline">Outbox</a>.
+            </div>
+
             <div class="rounded-md border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
                 <div class="px-3">
                     <div class="flex items-baseline gap-2 border-b border-stone-200 py-1.5 dark:border-stone-800">

@@ -23,6 +23,11 @@ const views = computed(() => [
     { key: 'all', label: 'All mail', icon: 'archive', count: null },
 ])
 
+// A send must never be invisible: the Outbox badge is the constant reminder
+// that something is still trying to leave, red when one has given up.
+const outboxCount = computed(() => (counts.value.outbox ?? 0) + (counts.value.drafts ?? 0))
+const outboxFailed = computed(() => (counts.value.outbox_failed ?? 0) > 0)
+
 const rowHeight = computed(() => (props.dense ? 'h-9' : 'h-12'))
 const textSize = computed(() => (props.dense ? 'text-sm' : 'text-[0.95rem]'))
 
@@ -67,6 +72,21 @@ function go(params) {
                 <span class="truncate">{{ view.label }}</span>
                 <span v-if="view.count" class="ml-auto text-xs font-semibold">{{ view.count }}</span>
             </button>
+
+            <Link
+                href="/outbox"
+                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                :class="[rowHeight, textSize]"
+                @click="emit('navigate')"
+            >
+                <Icon name="pencil" :size="props.dense ? 18 : 20" />
+                <span class="truncate">Outbox</span>
+                <span
+                    v-if="outboxCount"
+                    class="ml-auto text-xs font-semibold"
+                    :class="outboxFailed ? 'text-red-600 dark:text-red-400' : ''"
+                >{{ outboxCount }}</span>
+            </Link>
         </nav>
 
         <div class="mx-3 my-3 h-px bg-stone-200 dark:bg-stone-800" />

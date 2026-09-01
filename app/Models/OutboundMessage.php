@@ -6,6 +6,7 @@ use App\Enums\OutboundStatus;
 use App\Enums\OutboundType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class OutboundMessage extends Model
 {
@@ -37,5 +38,17 @@ class OutboundMessage extends Model
     public function inReplyToMessage(): BelongsTo
     {
         return $this->belongsTo(Message::class, 'in_reply_to_message_id');
+    }
+
+    /** Delete this draft and every upload staged for it. */
+    public function discard(): void
+    {
+        foreach ($this->attachments ?? [] as $attachment) {
+            if (isset($attachment['path'])) {
+                Storage::disk('local')->delete($attachment['path']);
+            }
+        }
+
+        $this->delete();
     }
 }

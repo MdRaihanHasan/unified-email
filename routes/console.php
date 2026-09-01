@@ -15,3 +15,7 @@ Schedule::command('mail:sync --all')
     ->withoutOverlapping();
 
 Schedule::command('mail:watchdog')->everyFifteenMinutes();
+
+// A queued send whose Redis job evaporated, or one killed mid-flight, has no
+// retry of its own — this is the only thing that ever brings it back.
+Schedule::command('mail:sweep-outbound')->everyFiveMinutes()->withoutOverlapping();
