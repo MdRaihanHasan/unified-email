@@ -13,6 +13,7 @@ const props = defineProps({
     threads: { type: Object, required: true },
     filters: { type: Object, required: true },
     open: { type: Object, default: null },
+    coverage: { type: String, default: null },
 })
 
 const rows = computed(() => props.threads.data)
@@ -94,6 +95,33 @@ function markRead(thread, read) {
 
 function syncNow() {
     router.post('/sync', {}, { preserveScroll: true, preserveState: true })
+}
+
+// Sticky day separators: the list used to run today → last week as one
+// undifferentiated column. A label renders where the day changes.
+function dayGroup(thread) {
+    if (!thread.last_message_at) return ''
+
+    const date = new Date(thread.last_message_at)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    if (date.toDateString() === today.toDateString()) return 'Today'
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+
+    return date.toLocaleDateString(undefined, {
+        weekday: undefined,
+        day: 'numeric',
+        month: 'short',
+        year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
+    })
+}
+
+function dayLabel(thread, previous) {
+    const label = dayGroup(thread)
+
+    return previous && dayGroup(previous) === label ? null : label
 }
 
 // Triage on the focused thread. The row disappears from most views, so the
@@ -237,13 +265,20 @@ const title = computed(() => {
                         <IconButton name="refresh" label="Sync" :size="18" @click="syncNow" />
                         <IconButton name="keyboard" label="Keyboard shortcuts" :size="18" @click="help = true" />
                         <span class="ml-auto text-xs text-stone-400">
-                            {{ props.threads.total }} {{ props.threads.total === 1 ? 'conversation' : 'conversations' }}
+                            {{ props.threads.total }} {{ props.threads.total === 1 ? 'conversation' : 'conversations'
+                            }}<template v-if="props.threads.last_page > 1"> · page {{ props.threads.current_page }} of {{ props.threads.last_page }}</template>
                         </span>
                     </template>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto">
                     <div v-for="(thread, index) in rows" :id="`thread-${thread.id}`" :key="thread.id">
+                        <div
+                            v-if="dayLabel(thread, rows[index - 1])"
+                            class="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 px-4 py-1 text-[0.65rem] font-semibold tracking-wider text-stone-400 uppercase backdrop-blur dark:border-stone-800 dark:bg-stone-950/95"
+                        >
+                            {{ dayLabel(thread, rows[index - 1]) }}
+                        </div>
                         <ThreadRow
                             :thread="thread"
                             :open="props.open?.thread.id === thread.id"
@@ -258,7 +293,15 @@ const title = computed(() => {
 
                     <div v-if="!rows.length" class="px-4 py-16 text-center">
                         <p class="text-sm text-stone-500 dark:text-stone-400">
-                            <template v-if="props.filters.q">Nothing matched “{{ props.filters.q }}”.</template>
+                            <template v-if="props.filters.q">
+                                Nothing matched “{{ props.filters.q }}”.
+                                <span v-if="props.coverage" class="mt-1 block text-xs text-stone-400">
+                                    Searchable mail goes back to
+                                    {{ new Date(props.coverage).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                                    — older mail can be imported from
+                                    <Link href="/accounts" class="underline">the accounts page</Link>.
+                                </span>
+                            </template>
                             <template v-else>Nothing here yet.</template>
                         </p>
                         <Link

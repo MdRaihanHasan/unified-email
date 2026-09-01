@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts');
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::post('accounts/{account}/import-older', [AccountController::class, 'importOlder'])->name('accounts.import-older');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
     // The callback path must match the redirect URI registered in Google Cloud

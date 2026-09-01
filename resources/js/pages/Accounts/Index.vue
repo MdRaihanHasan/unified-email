@@ -114,6 +114,13 @@ const statusStyles = {
                                     @click="togglePause(account)"
                                 >{{ account.status === 'disabled' ? 'Resume' : 'Pause' }}</button>
                                 <button
+                                    v-if="!account.full_history && !account.backfilling"
+                                    type="button"
+                                    class="text-xs font-semibold text-stone-500 hover:underline dark:text-stone-400"
+                                    title="The first import covers recent mail only; this walks the whole mailbox"
+                                    @click="router.post(`/accounts/${account.id}/import-older`, {}, { preserveScroll: true })"
+                                >Import full history</button>
+                                <button
                                     type="button"
                                     class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
                                     @click="removeAccount(account)"

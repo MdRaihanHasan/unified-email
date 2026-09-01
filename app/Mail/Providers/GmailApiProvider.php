@@ -100,7 +100,9 @@ class GmailApiProvider implements MailboxProvider
 
     public function fetchPage(MailAccount $account, Folder $folder, ?string $cursor = null): MessagePage
     {
-        $days = (int) config('mail_providers.sync.backfill_days');
+        // Per-account override first: null follows the configured default, and 0
+        // means the whole mailbox ("import full history" on the accounts page).
+        $days = (int) ($account->backfill_days ?? config('mail_providers.sync.backfill_days'));
 
         $listing = $this->call(fn () => $this->gmail($account)->users_messages->listUsersMessages('me', [
             'labelIds' => [$folder->remote_id],

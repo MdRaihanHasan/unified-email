@@ -114,6 +114,10 @@ class InboxController
             // Only the open thread's body is loaded, and only when one is open —
             // lazily, so list-only partial reloads never pay for sanitizing.
             'open' => fn () => $selected === null ? null : $this->openThread($request, $selected),
+            // For the search empty state: "no matches" is only trustworthy if the
+            // reader knows how far back the archive goes. Silent partial coverage
+            // reads as data loss.
+            'coverage' => fn () => Message::min('received_at'),
         ]);
     }
 

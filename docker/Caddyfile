@@ -23,6 +23,17 @@
 	@immutable path /build/assets/*
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
 
+	# Defense in depth for a mailbox app rendering arbitrary sender HTML.
+	# unsafe-inline styles are required: sanitized emails carry inline styles,
+	# and the srcdoc body frame inherits this policy. Scripts stay 'self' —
+	# nothing inline anywhere, and the body iframe's sandbox has none at all.
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
 	php_server {
 		index index.php
 	}

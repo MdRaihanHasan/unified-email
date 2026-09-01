@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AccountStatus;
 use App\Enums\Provider;
+use App\Jobs\BackfillJob;
 use App\Jobs\RemoveAccountJob;
 use App\Mail\Providers\Gmail\ClientFactory;
 use App\Models\MailAccount;
@@ -53,6 +54,26 @@ class AccountController
         $account->fill($data)->save();
 
         return back()->with('message', "{$account->email} updated.");
+    }
+
+    /**
+     * Widen the import window to the whole mailbox and re-walk it.
+     *
+     * The walk is the ordinary resumable backfill: every store is an upsert, so
+     * the mail already held is re-confirmed and only the older tail is new work.
+     */
+    public function importOlder(MailAccount $account): RedirectResponse
+    {
+        if (! $account->hasFinishedBackfill()) {
+            return back()->with('message', 'The first import is still running — older mail can follow once it finishes.');
+        }
+
+        $account->update(['backfill_days' => 0, 'backfill_done_at' => null]);
+        $account->folders()->update(['backfill_done_at' => null, 'backfill_cursor' => null]);
+
+        BackfillJob::dispatch($account);
+
+        return back()->with('message', "Importing {$account->email}'s full history — mail keeps working while it runs.");
     }
 
     public function destroy(MailAccount $account): RedirectResponse

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import Avatar from './Avatar.vue'
+import EmailBody from './EmailBody.vue'
 import Icon from './Icon.vue'
 import IconButton from './IconButton.vue'
 import RelativeTime from './RelativeTime.vue'
@@ -314,7 +315,7 @@ function replyActions(message) {
                             </button>
                         </div>
 
-                        <div v-if="message.body_html" class="email-body text-sm" v-html="message.body_html" />
+                        <EmailBody v-if="message.body_html" :html="message.body_html" />
                         <p v-else-if="!message.has_body" class="text-sm text-stone-400 italic">
                             Body not downloaded yet.
                         </p>

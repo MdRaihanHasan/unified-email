@@ -54,6 +54,7 @@ class HandleInertiaRequests extends Middleware
                     'display_name' => $account->display_name,
                     'signature_html' => $account->signature_html,
                     'removing' => $account->removal_requested_at !== null,
+                    'full_history' => $account->backfill_days === 0,
                 ])->values(),
 
             // The sidebar shows these on every screen, so they are computed lazily
