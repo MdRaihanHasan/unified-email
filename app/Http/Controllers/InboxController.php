@@ -11,6 +11,7 @@ use App\Models\Message;
 use App\Models\OutboundMessage;
 use App\Models\Thread;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -183,63 +184,19 @@ class InboxController
                     ])
                     ->unique('value')->values(),
             ],
-            'messages' => $thread->messages->map(function (Message $message) use ($showImagesFor) {
-                $body = $message->body_html !== null
-                    ? $this->sanitizer->sanitize($message->body_html, allowRemoteImages: $showImagesFor === $message->id)
-                    : ['html' => $this->sanitizer->fromText($message->body_text), 'blocked_images' => 0];
+            // One rendered card per RFC Message-ID: a cross-account thread holds a
+            // copy per mailbox, and rendering both used to show every message twice.
+            'messages' => $thread->messages
+                ->groupBy(fn (Message $m) => $m->rfc822_message_id ?? 'row-'.$m->id)
+                ->map(function ($copies) use ($showImagesFor) {
+                    // Prefer the copy that has a body, then one that is not in
+                    // trash/spam — the reader wants the living, fullest copy.
+                    $message = $copies->sortByDesc(fn (Message $m) => ($m->body_html !== null || $m->body_text !== null ? 2 : 0)
+                        + ($this->hiddenReason($m) === null ? 1 : 0))->first();
 
-                // cid: references point at inline attachments of this same message,
-                // so they are safe to show without the remote-image consent step —
-                // rewrite them to the attachment endpoint, which streams and caches.
-                foreach ($message->attachments as $attachment) {
-                    if ($attachment->content_id !== null) {
-                        $body['html'] = str_ireplace(
-                            'cid:'.$attachment->content_id,
-                            route('messages.attachments.show', [$message, $attachment]),
-                            $body['html'],
-                        );
-                    }
-                }
-
-                // A trashed or junked message still renders inside its thread, but
-                // collapsed and labeled — Gmail's "deleted messages" toggle.
-                $hiddenReason = match (true) {
-                    $message->folders->contains(fn ($f) => $f->role === FolderRole::Trash) => 'trash',
-                    $message->folders->contains(fn ($f) => $f->role === FolderRole::Junk) => 'junk',
-                    default => null,
-                };
-
-                return [
-                    'id' => $message->id,
-                    'hidden_reason' => $hiddenReason,
-                    'account' => [
-                        'id' => $message->mailAccount->id,
-                        'label' => $message->mailAccount->label,
-                        'email' => $message->mailAccount->email,
-                        'provider' => $message->mailAccount->provider->value,
-                    ],
-                    'from' => $message->from_addr,
-                    'to' => $message->to_addrs ?? [],
-                    'cc' => $message->cc_addrs ?? [],
-                    'subject' => $message->subject,
-                    'snippet' => $message->snippet,
-                    'body_html' => $body['html'],
-                    'blocked_images' => $body['blocked_images'],
-                    'has_body' => $message->body_html !== null || $message->body_text !== null,
-                    'received_at' => $message->received_at?->toIso8601String(),
-                    'is_read' => $message->is_read,
-                    'is_starred' => $message->is_starred,
-                    'attachments' => $message->attachments
-                        ->where('is_inline', false)
-                        ->map(fn ($attachment) => [
-                            'id' => $attachment->id,
-                            'filename' => $attachment->filename,
-                            'mime_type' => $attachment->mime_type,
-                            'size_bytes' => $attachment->size_bytes,
-                            'url' => route('messages.attachments.show', [$message, $attachment], false),
-                        ])->values(),
-                ];
-            })->values(),
+                    return $this->messageCard($message, $copies, $showImagesFor);
+                })
+                ->values(),
             // Mail we tried to send on this thread that has not landed. A send can
             // sit in retry backoff for minutes; without this the user clicks Send,
             // sees nothing, and cannot tell success from silent failure.
@@ -257,6 +214,78 @@ class InboxController
                     'to' => $outbound->to_addrs ?? [],
                     'attempts' => $outbound->attempts,
                     'error' => $outbound->error,
+                ])->values(),
+        ];
+    }
+
+    /** A trashed or junked message renders collapsed and labeled, never expanded. */
+    private function hiddenReason(Message $message): ?string
+    {
+        return match (true) {
+            $message->folders->contains(fn ($f) => $f->role === FolderRole::Trash) => 'trash',
+            $message->folders->contains(fn ($f) => $f->role === FolderRole::Junk) => 'junk',
+            $message->is_draft => 'draft',
+            default => null,
+        };
+    }
+
+    /**
+     * One rendered message, standing in for every mailbox's copy of it.
+     *
+     * @param  Collection<int, Message>  $copies
+     */
+    private function messageCard(Message $message, $copies, ?int $showImagesFor): array
+    {
+        $body = $message->body_html !== null
+            ? $this->sanitizer->sanitize($message->body_html, allowRemoteImages: $showImagesFor === $message->id)
+            : ['html' => $this->sanitizer->fromText($message->body_text), 'blocked_images' => 0];
+
+        // cid: references point at inline attachments of this same message,
+        // so they are safe to show without the remote-image consent step —
+        // rewrite them to the attachment endpoint, which streams and caches.
+        foreach ($message->attachments as $attachment) {
+            if ($attachment->content_id !== null) {
+                $body['html'] = str_ireplace(
+                    'cid:'.$attachment->content_id,
+                    route('messages.attachments.show', [$message, $attachment]),
+                    $body['html'],
+                );
+            }
+        }
+
+        $accountOf = fn (Message $m) => [
+            'id' => $m->mailAccount->id,
+            'label' => $m->mailAccount->label,
+            'email' => $m->mailAccount->email,
+            'provider' => $m->mailAccount->provider->value,
+        ];
+
+        return [
+            'id' => $message->id,
+            'hidden_reason' => $this->hiddenReason($message),
+            'account' => $accountOf($message),
+            // Every mailbox holding a copy, for the chip cluster. Flag flips fan
+            // out to all of them server-side.
+            'accounts' => $copies->map($accountOf)->unique('id')->values(),
+            'from' => $message->from_addr,
+            'to' => $message->to_addrs ?? [],
+            'cc' => $message->cc_addrs ?? [],
+            'subject' => $message->subject,
+            'snippet' => $message->snippet,
+            'body_html' => $body['html'],
+            'blocked_images' => $body['blocked_images'],
+            'has_body' => $message->body_html !== null || $message->body_text !== null,
+            'received_at' => $message->received_at?->toIso8601String(),
+            'is_read' => $message->is_read,
+            'is_starred' => $message->is_starred,
+            'attachments' => $message->attachments
+                ->where('is_inline', false)
+                ->map(fn ($attachment) => [
+                    'id' => $attachment->id,
+                    'filename' => $attachment->filename,
+                    'mime_type' => $attachment->mime_type,
+                    'size_bytes' => $attachment->size_bytes,
+                    'url' => route('messages.attachments.show', [$message, $attachment], false),
                 ])->values(),
         ];
     }

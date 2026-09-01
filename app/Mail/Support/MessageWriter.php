@@ -272,7 +272,7 @@ class MessageWriter
 
         $messages = $thread->messages()
             ->orderBy('received_at')
-            ->get(['id', 'subject', 'snippet', 'from_addr', 'to_addrs', 'cc_addrs', 'received_at', 'sent_at', 'is_read', 'is_starred', 'has_attachments']);
+            ->get(['id', 'rfc822_message_id', 'subject', 'snippet', 'from_addr', 'to_addrs', 'cc_addrs', 'received_at', 'sent_at', 'is_read', 'is_starred', 'is_draft', 'has_attachments']);
 
         if ($messages->isEmpty()) {
             $thread->delete();
@@ -280,11 +280,13 @@ class MessageWriter
             return;
         }
 
-        // Spam and trash are imported (so their views work and a restore syncs
-        // back), but an unread junk message must not light up the Unread count —
-        // "Unread 1,025" full of spam is a number the user learns to ignore.
+        // Spam, trash and Gmail-side drafts are imported (so their views work and
+        // a restore syncs back), but an unread junk message must not light up the
+        // Unread count — "Unread 1,025" full of spam is a number the user learns
+        // to ignore.
         $junked = $this->junkedMessageIds($messages->pluck('id')->all());
-        $countable = $messages->reject(fn (Message $message) => in_array($message->id, $junked, true));
+        $countable = $messages->reject(fn (Message $message) => $message->is_draft
+            || in_array($message->id, $junked, true));
 
         $latest = $messages->last();
         $participants = [];
@@ -306,7 +308,11 @@ class MessageWriter
             'participants' => array_values(array_unique($participants)),
             'first_message_at' => $messages->first()->received_at ?? $messages->first()->sent_at,
             'last_message_at' => $latest->received_at ?? $latest->sent_at,
-            'message_count' => $messages->count(),
+            // Distinct Message-IDs, not rows: a cross-account thread holds one
+            // copy per mailbox and a 3-email exchange must not read as "6".
+            'message_count' => $messages->unique(
+                fn (Message $m) => $m->rfc822_message_id ?? 'row-'.$m->id,
+            )->count(),
             'unread_count' => $countable->where('is_read', false)->count(),
             'has_attachments' => $messages->contains('has_attachments', true),
             'is_starred' => $messages->contains('is_starred', true),

@@ -226,9 +226,13 @@ function replyActions(message) {
                     class="flex w-full items-center gap-2.5 px-4 py-2 text-left transition hover:bg-stone-50 dark:hover:bg-stone-800/50"
                     @click="toggle(message.id)"
                 >
-                    <Icon :name="message.hidden_reason === 'trash' ? 'trash' : 'warn'" :size="14" class="ml-1.5 shrink-0 text-stone-400" />
+                    <Icon
+                        :name="{ trash: 'trash', junk: 'warn', draft: 'pencil' }[message.hidden_reason]"
+                        :size="14"
+                        class="ml-1.5 shrink-0 text-stone-400"
+                    />
                     <span class="min-w-0 flex-1 truncate text-xs text-stone-400 italic">
-                        {{ message.hidden_reason === 'trash' ? 'Deleted message' : 'Marked as spam' }}
+                        {{ { trash: 'Deleted message', junk: 'Marked as spam', draft: 'Gmail draft' }[message.hidden_reason] }}
                         — {{ name(message.from) }} · show
                     </span>
                     <RelativeTime :value="message.received_at" class="shrink-0 text-xs text-stone-400" />
@@ -257,12 +261,16 @@ function replyActions(message) {
                             <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-stone-400">
                                 <span>to {{ message.to.map((a) => a.address).join(', ') || '(undisclosed)' }}</span>
                                 <span v-if="message.cc.length">cc {{ message.cc.map((a) => a.address).join(', ') }}</span>
-                                <span class="inline-flex items-center gap-1.5">
+                                <span
+                                    v-for="acct in message.accounts ?? [message.account]"
+                                    :key="acct.id"
+                                    class="inline-flex items-center gap-1.5"
+                                >
                                     <span
                                         class="mailbox-fill size-1.5 rounded-full"
-                                        :style="{ '--mailbox': `var(--mailbox-${message.account.provider})` }"
+                                        :style="{ '--mailbox': `var(--mailbox-${acct.provider})` }"
                                     />
-                                    {{ message.account.label }}
+                                    {{ acct.label }}
                                 </span>
                             </div>
                         </button>

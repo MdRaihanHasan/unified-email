@@ -27,31 +27,46 @@ class MessageFlagController
             'is_starred' => ['nullable', 'boolean'],
         ]);
 
-        $previous = [
-            $message->provider_message_id => [
-                'is_read' => $message->is_read,
-                'is_starred' => $message->is_starred,
-            ],
-        ];
-
         $changes = array_filter($data, fn ($value) => $value !== null);
 
         if ($changes === []) {
             return back();
         }
 
-        $message->update($changes);
+        // A cross-account thread holds one copy of this message per mailbox, and
+        // the UI shows them as ONE message — so a flag flip has to reach every
+        // copy, or the other mailbox re-asserts its old state on the next poll.
+        $copies = $message->rfc822_message_id === null
+            ? collect([$message->load('mailAccount')])
+            : Message::query()
+                ->with('mailAccount')
+                ->where('thread_id', $message->thread_id)
+                ->where('rfc822_message_id', $message->rfc822_message_id)
+                ->get();
+
+        $previous = $copies->mapWithKeys(fn (Message $copy) => [
+            $copy->provider_message_id => [
+                'is_read' => $copy->is_read,
+                'is_starred' => $copy->is_starred,
+            ],
+        ])->all();
+
+        Message::whereIn('id', $copies->pluck('id'))->update($changes);
         $this->writer->recountThread($message->thread_id);
 
-        PushFlagsJob::dispatch(
-            $message->mailAccount,
-            [$message->provider_message_id],
-            new FlagChange(
-                isRead: $data['is_read'] ?? null,
-                isStarred: $data['is_starred'] ?? null,
-            ),
-            $previous,
+        $change = new FlagChange(
+            isRead: $data['is_read'] ?? null,
+            isStarred: $data['is_starred'] ?? null,
         );
+
+        foreach ($copies->groupBy('mail_account_id') as $group) {
+            PushFlagsJob::dispatch(
+                $group->first()->mailAccount,
+                $group->pluck('provider_message_id')->all(),
+                $change,
+                $previous,
+            );
+        }
 
         return back();
     }

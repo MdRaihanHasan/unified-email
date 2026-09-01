@@ -5,6 +5,7 @@ namespace App\Mail\Support;
 use App\Mail\Data\RemoteMessage;
 use App\Models\MailAccount;
 use App\Models\Message;
+use App\Models\OutboundMessage;
 use App\Models\Thread;
 
 /**
@@ -38,35 +39,75 @@ class ThreadResolver
     /** Tier 1 — headers. Cross-account merging happens here and only here. */
     private function byReferences(RemoteMessage $remote): ?Thread
     {
-        // Nearest ancestor first: In-Reply-To, then References newest to oldest.
-        $candidates = array_filter([$remote->inReplyTo, ...array_reverse($remote->references)]);
+        // Ancestors — and our own Message-ID: another mailbox's copy of this very
+        // message (the Sent original beside the received copy) shares it, and the
+        // two copies must be one thread even when neither carries References.
+        $candidates = array_filter([
+            $remote->inReplyTo,
+            ...array_reverse($remote->references),
+            $remote->rfc822MessageId,
+        ]);
 
-        foreach ($candidates as $messageId) {
-            $thread = Message::query()
-                ->where('rfc822_message_id', $messageId)
-                ->value('thread_id');
-
-            if ($thread !== null) {
-                return Thread::find($thread);
-            }
-        }
+        $threadIds = $candidates === []
+            ? collect()
+            : Message::query()
+                ->whereIn('rfc822_message_id', $candidates)
+                ->distinct()
+                ->pluck('thread_id');
 
         // We may instead be the *parent* of something already stored: two accounts
         // poll independently, so a reply can be synced before the message it answers.
         // This runs even when we have no References of our own — a thread root has
         // none by definition, and that is exactly the case that needs it.
         if ($remote->rfc822MessageId !== null) {
-            $threadId = Message::query()
-                ->whereJsonContains('references_ids', $remote->rfc822MessageId)
-                ->orWhere('in_reply_to', $remote->rfc822MessageId)
-                ->value('thread_id');
-
-            if ($threadId !== null) {
-                return Thread::find($threadId);
-            }
+            $threadIds = $threadIds->merge(Message::query()
+                ->where(fn ($query) => $query
+                    ->whereJsonContains('references_ids', $remote->rfc822MessageId)
+                    ->orWhere('in_reply_to', $remote->rfc822MessageId))
+                ->distinct()
+                ->pluck('thread_id'));
         }
 
-        return null;
+        $threadIds = $threadIds->unique()->values();
+
+        return match (true) {
+            $threadIds->isEmpty() => null,
+            $threadIds->count() === 1 => Thread::find($threadIds->first()),
+            // The evidence says these are one conversation that resolved apart —
+            // an unlucky cross-account arrival order, or truncated References that
+            // later filled in. Converge now, while the proof is in hand.
+            default => $this->mergeThreads($threadIds->all()),
+        };
+    }
+
+    /**
+     * Merge threads the headers have proven to be one conversation. The largest
+     * survives; the rest hand over their messages and outbound drafts and vanish.
+     * Counters are not touched here — every caller recounts the returned thread
+     * after storing, and the losers no longer exist to be wrong.
+     *
+     * @param  list<int>  $threadIds
+     */
+    private function mergeThreads(array $threadIds): ?Thread
+    {
+        $winner = Thread::query()
+            ->whereIn('id', $threadIds)
+            ->withCount('messages')
+            ->orderByDesc('messages_count')
+            ->orderBy('id')
+            ->first();
+
+        if ($winner === null) {
+            return null;
+        }
+
+        $losers = array_values(array_diff($threadIds, [$winner->id]));
+
+        Message::whereIn('thread_id', $losers)->update(['thread_id' => $winner->id]);
+        OutboundMessage::whereIn('thread_id', $losers)->update(['thread_id' => $winner->id]);
+        Thread::whereIn('id', $losers)->delete();
+
+        return $winner;
     }
 
     /** Tier 2 — the provider's own thread id, scoped to the issuing account. */
