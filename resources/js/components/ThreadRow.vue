@@ -39,7 +39,7 @@ const people = computed(() => {
                   : 'bg-stone-50/60 hover:bg-stone-100/80 dark:bg-stone-950/30 dark:hover:bg-stone-800/40',
             props.cursor ? 'ring-1 ring-sky-500/70 ring-inset' : '',
         ]"
-        :style="{ '--mailbox': `var(--mailbox-${props.thread.providers[0] ?? 'graph'})`, borderLeftColor: 'var(--mailbox)' }"
+        :style="{ borderLeftColor: props.thread.providers[0] ?? 'transparent' }"
         role="button"
         :aria-current="props.open ? 'true' : undefined"
         @click="emit('open')"
@@ -70,7 +70,7 @@ const people = computed(() => {
             </button>
         </div>
 
-        <Avatar :name="people" :provider="props.thread.providers[0]" :size="30" />
+        <Avatar :name="people" :size="30" />
 
         <!-- Three lines, not one. A single line in this pane truncated every subject
              after three words and left no room for the snippet at all. -->
@@ -86,10 +86,10 @@ const people = computed(() => {
                 <span class="truncate" :class="unread ? 'font-bold' : 'text-stone-600 dark:text-stone-400'">{{ people }}</span>
 
                 <span
-                    v-for="provider in props.thread.providers.slice(1)"
-                    :key="provider"
-                    class="mailbox-fill size-1.5 shrink-0 rounded-full"
-                    :style="{ '--mailbox': `var(--mailbox-${provider})` }"
+                    v-for="color in props.thread.providers.slice(1)"
+                    :key="color"
+                    class="size-1.5 shrink-0 rounded-full"
+                    :style="{ background: color }"
                     title="Also in another mailbox"
                 />
 

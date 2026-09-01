@@ -10,6 +10,7 @@ use App\Models\MailAccount;
 use App\Models\Message;
 use App\Models\OutboundMessage;
 use App\Models\Thread;
+use App\Support\AccountColor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -69,7 +70,8 @@ class InboxController
         // A closure, so Inertia partial reloads that only ask for `open` (every
         // thread click) skip the whole list query instead of re-running it.
         $threads = function () use ($view, $filters) {
-            $accounts = MailAccount::query()->pluck('provider', 'id');
+            $colors = MailAccount::query()->get(['id', 'label', 'email'])
+                ->mapWithKeys(fn (MailAccount $a) => [$a->id => AccountColor::for($a)]);
             $ownAddresses = MailAccount::query()->pluck('email')
                 ->map(fn (string $email) => mb_strtolower($email))
                 ->all();
@@ -91,9 +93,10 @@ class InboxController
                     // compares those, so the names come from the messages themselves.
                     'participants' => $this->counterparties($thread, $ownAddresses),
                     // A merged inbox hides which mailbox a thread arrived in, so put it
-                    // back. A thread stitched across accounts reports more than one.
+                    // back — as that account's color. A thread stitched across
+                    // accounts reports more than one.
                     'providers' => $thread->messages
-                        ->map(fn ($message) => $accounts[$message->mail_account_id]?->value)
+                        ->map(fn ($message) => $colors[$message->mail_account_id] ?? null)
                         ->filter()->unique()->values(),
                     'message_count' => $thread->message_count,
                     'unread_count' => $thread->unread_count,
@@ -191,8 +194,9 @@ class InboxController
                     ->map(fn (Message $m) => [
                         'value' => $m->mailAccount->provider->value,
                         'label' => $m->mailAccount->label,
+                        'color' => AccountColor::for($m->mailAccount),
                     ])
-                    ->unique('value')->values(),
+                    ->unique('label')->values(),
             ],
             // One rendered card per RFC Message-ID: a cross-account thread holds a
             // copy per mailbox, and rendering both used to show every message twice.
@@ -278,6 +282,7 @@ class InboxController
             'label' => $m->mailAccount->label,
             'email' => $m->mailAccount->email,
             'provider' => $m->mailAccount->provider->value,
+            'color' => AccountColor::for($m->mailAccount),
         ];
 
         return [

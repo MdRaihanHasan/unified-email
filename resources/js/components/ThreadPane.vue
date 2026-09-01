@@ -165,10 +165,7 @@ function replyActions(message) {
                         class="inline-flex items-center gap-1.5"
                     >
                         <span v-if="index" aria-hidden="true">+</span>
-                        <span
-                            class="mailbox-fill size-1.5 rounded-full"
-                            :style="{ '--mailbox': `var(--mailbox-${provider.value})` }"
-                        />
+                        <span class="size-1.5 rounded-full" :style="{ background: provider.color }" />
                         {{ provider.label }}
                     </span>
                     <span v-if="thread.providers.length > 1">— stitched across two mailboxes</span>
@@ -245,7 +242,7 @@ function replyActions(message) {
                     class="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition hover:bg-stone-50 dark:hover:bg-stone-800/50"
                     @click="toggle(message.id)"
                 >
-                    <Avatar :name="name(message.from)" :provider="message.account.provider" :size="26" />
+                    <Avatar :name="name(message.from)" :seed="message.from?.address" :size="26" />
                     <span class="shrink-0 text-sm font-semibold">{{ name(message.from) }}</span>
                     <span class="min-w-0 flex-1 truncate text-sm text-stone-400">{{ message.snippet }}</span>
                     <RelativeTime :value="message.received_at" class="shrink-0 text-xs text-stone-400" />
@@ -253,7 +250,7 @@ function replyActions(message) {
 
                 <div v-else class="px-4 py-3.5">
                     <div class="flex items-start gap-2.5">
-                        <Avatar :name="name(message.from)" :provider="message.account.provider" :size="34" />
+                        <Avatar :name="name(message.from)" :seed="message.from?.address" :size="34" />
                         <button type="button" class="min-w-0 flex-1 text-left" @click="toggle(message.id)">
                             <div class="flex flex-wrap items-baseline gap-x-2">
                                 <span class="font-semibold">{{ name(message.from) }}</span>
@@ -268,8 +265,8 @@ function replyActions(message) {
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <span
-                                        class="mailbox-fill size-1.5 rounded-full"
-                                        :style="{ '--mailbox': `var(--mailbox-${acct.provider})` }"
+                                        class="size-1.5 rounded-full"
+                                        :style="{ background: acct.color }"
                                     />
                                     {{ acct.label }}
                                 </span>

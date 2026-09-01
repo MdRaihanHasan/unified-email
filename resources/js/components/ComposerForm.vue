@@ -192,8 +192,8 @@ const account = () => props.accounts.find((a) => a.id === form.value.mail_accoun
             >
                 <span class="w-9 shrink-0 text-xs text-stone-400">From</span>
                 <span
-                    class="mailbox-fill size-2 shrink-0 rounded-full"
-                    :style="{ '--mailbox': `var(--mailbox-${account()?.provider})` }"
+                    class="size-2 shrink-0 rounded-full"
+                    :style="{ background: account()?.color }"
                 />
                 <select
                     v-model="form.mail_account_id"

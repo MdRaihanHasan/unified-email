@@ -6,6 +6,7 @@ use App\Enums\OutboundStatus;
 use App\Models\MailAccount;
 use App\Models\OutboundMessage;
 use App\Models\Thread;
+use App\Support\AccountColor;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,6 +37,8 @@ class HandleInertiaRequests extends Middleware
                     'email' => $account->email,
                     'provider' => $account->provider->value,
                     'provider_label' => $account->provider->label(),
+                    // One hue per mailbox, the same everywhere it appears.
+                    'color' => AccountColor::for($account),
                     'status' => $account->status->value,
                     'last_synced_at' => $account->last_synced_at?->toIso8601String(),
                     'last_synced_for_humans' => $account->last_synced_at?->diffForHumans(),

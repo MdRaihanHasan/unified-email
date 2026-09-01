@@ -27,39 +27,42 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 
     /*
-     * The palette, retuned in place. Components keep saying sky-* and stone-*;
-     * what those names MEAN changes here, so the whole app moves together.
+     * The palette (from the reviewed unifiedmailpalette spec). Components keep
+     * saying sky-* and stone-*; what those names MEAN is defined here, so the
+     * whole app moves together.
      *
-     * Accent — "iris", a modern indigo-violet, replaces default-Tailwind blue.
-     * One hue everywhere: selection, unread, focus, links, the compose button.
+     * Accent — indigo (#4F46E5 light / #818CF8 in the dark theme, which uses the
+     * lighter 400 step). One hue everywhere: selection, links, unread, focus,
+     * active nav, primary buttons. Red stays reserved for spam and delete.
      */
-    --color-sky-50: oklch(96.5% 0.018 282);
-    --color-sky-100: oklch(93.5% 0.033 282);
-    --color-sky-200: oklch(88% 0.055 282);
-    --color-sky-300: oklch(80% 0.085 282);
-    --color-sky-400: oklch(72% 0.118 282);
-    --color-sky-500: oklch(62% 0.155 282);
-    --color-sky-600: oklch(54% 0.175 282);
-    --color-sky-700: oklch(47% 0.16 282);
-    --color-sky-800: oklch(40% 0.13 282);
-    --color-sky-900: oklch(34% 0.10 282);
-    --color-sky-950: oklch(24% 0.07 282);
+    --color-sky-50: #eef2ff;
+    --color-sky-100: #e0e7ff;
+    --color-sky-200: #c7d2fe;
+    --color-sky-300: #a5b4fc;
+    --color-sky-400: #818cf8;
+    --color-sky-500: #6366f1;
+    --color-sky-600: #4f46e5;
+    --color-sky-700: #4338ca;
+    --color-sky-800: #3730a3;
+    --color-sky-900: #312e81;
+    --color-sky-950: #1e1b4b;
 
     /*
-     * Neutrals — warmer paper in the light theme, violet-cast near-black in the
-     * dark one, instead of stock gray both ways.
+     * Neutrals — cool gray for the light theme, slate for the dark one:
+     * bg #F9FAFB / panel white / border #E5E7EB in light;
+     * bg #0F172A / panel #1E293B / border #334155 in dark.
      */
-    --color-stone-50: oklch(97.8% 0.004 85);
-    --color-stone-100: oklch(95.2% 0.005 85);
-    --color-stone-200: oklch(90.5% 0.006 85);
-    --color-stone-300: oklch(84% 0.007 85);
-    --color-stone-400: oklch(68% 0.010 80);
-    --color-stone-500: oklch(54% 0.011 75);
-    --color-stone-600: oklch(43% 0.011 70);
-    --color-stone-700: oklch(36% 0.011 285);
-    --color-stone-800: oklch(28% 0.012 285);
-    --color-stone-900: oklch(21.5% 0.012 285);
-    --color-stone-950: oklch(16% 0.010 285);
+    --color-stone-50: #f9fafb;
+    --color-stone-100: #f3f4f6;
+    --color-stone-200: #e5e7eb;
+    --color-stone-300: #d1d5db;
+    --color-stone-400: #9ca3af;
+    --color-stone-500: #6b7280;
+    --color-stone-600: #4b5563;
+    --color-stone-700: #475569;
+    --color-stone-800: #334155;
+    --color-stone-900: #1e293b;
+    --color-stone-950: #0f172a;
 
     /* Softer corners across the board. */
     --radius-sm: 0.375rem;
@@ -88,6 +91,29 @@
 
 .mailbox-stripe { border-left-color: var(--mailbox, transparent); }
 .mailbox-fill { background-color: var(--mailbox, currentColor); }
+
+/*
+ * Avatar tints: eight muted pairs, picked by a hash of the sender's address so
+ * the same sender wears the same color everywhere. Tinted background with a
+ * darker letter — softer than solid circles — with dark-theme counterparts.
+ */
+.av-0 { background: #fee2e2; color: #b91c1c; }
+.av-1 { background: #ffedd5; color: #c2410c; }
+.av-2 { background: #fef3c7; color: #b45309; }
+.av-3 { background: #d1fae5; color: #047857; }
+.av-4 { background: #ccfbf1; color: #0f766e; }
+.av-5 { background: #e0f2fe; color: #0369a1; }
+.av-6 { background: #e0e7ff; color: #4338ca; }
+.av-7 { background: #f3e8ff; color: #7e22ce; }
+
+.dark .av-0 { background: #450a0a; color: #fca5a5; }
+.dark .av-1 { background: #431407; color: #fdba74; }
+.dark .av-2 { background: #451a03; color: #fcd34d; }
+.dark .av-3 { background: #022c22; color: #6ee7b7; }
+.dark .av-4 { background: #042f2e; color: #5eead4; }
+.dark .av-5 { background: #082f49; color: #7dd3fc; }
+.dark .av-6 { background: #1e1b4b; color: #a5b4fc; }
+.dark .av-7 { background: #3b0764; color: #d8b4fe; }
 
 /*
  * Email bodies are foreign HTML from arbitrary senders. Tailwind's preflight has

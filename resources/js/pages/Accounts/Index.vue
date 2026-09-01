@@ -71,7 +71,7 @@ const statusStyles = {
 
                 <ul v-if="accounts.length" class="mt-4 divide-y divide-stone-200 dark:divide-stone-800">
                     <li v-for="account in accounts" :key="account.id" class="flex flex-wrap items-start gap-3 py-3">
-                        <Avatar :name="account.label" :provider="account.provider" :size="32" />
+                        <Avatar :name="account.label" :seed="account.email" :size="32" />
 
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">{{ account.label }}</p>

@@ -30,6 +30,18 @@ const views = computed(() => [
 const outboxCount = computed(() => (counts.value.outbox ?? 0) + (counts.value.drafts ?? 0))
 const outboxFailed = computed(() => (counts.value.outbox_failed ?? 0) > 0)
 
+// The "all mailboxes" dot wears every connected account's color at once.
+const allDot = computed(() => {
+    const colors = accounts.value.map((a) => a.color).filter(Boolean)
+    if (!colors.length) return 'var(--color-sky-600)'
+    if (colors.length === 1) return colors[0]
+
+    const step = 100 / colors.length
+    const stops = colors.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(', ')
+
+    return `conic-gradient(${stops})`
+})
+
 const rowHeight = computed(() => (props.dense ? 'h-9' : 'h-12'))
 const textSize = computed(() => (props.dense ? 'text-sm' : 'text-[0.95rem]'))
 
@@ -108,10 +120,7 @@ function go(params) {
             ]"
             @click="go({ account: undefined })"
         >
-            <span
-                class="ml-1 size-2 shrink-0 rounded-full"
-                style="background: linear-gradient(135deg, var(--mailbox-gmail_api) 0 33%, var(--mailbox-imap) 33% 66%, var(--mailbox-graph) 66%)"
-            />
+            <span class="ml-1 size-2 shrink-0 rounded-full" :style="{ background: allDot }" />
             <span class="truncate">All mailboxes</span>
         </button>
 
@@ -128,10 +137,7 @@ function go(params) {
             ]"
             @click="go({ account: account.id })"
         >
-            <span
-                class="mailbox-fill ml-1 size-2 shrink-0 rounded-full"
-                :style="{ '--mailbox': `var(--mailbox-${account.provider})` }"
-            />
+            <span class="ml-1 size-2 shrink-0 rounded-full" :style="{ background: account.color }" />
             <span class="truncate">{{ account.label }}</span>
             <span
                 v-if="account.status === 'auth_error'"

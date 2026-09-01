@@ -11,6 +11,7 @@ use App\Mail\Support\ReplyHeaders;
 use App\Models\MailAccount;
 use App\Models\Message;
 use App\Models\OutboundMessage;
+use App\Support\AccountColor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,7 @@ class ComposeController
                     'label' => $a->label,
                     'email' => $a->email,
                     'provider' => $a->provider->value,
+                    'color' => AccountColor::for($a),
                 ])->values(),
         ]);
     }
@@ -95,6 +97,7 @@ class ComposeController
                     'label' => $a->label,
                     'email' => $a->email,
                     'provider' => $a->provider->value,
+                    'color' => AccountColor::for($a),
                 ])->values(),
         ]);
     }
@@ -136,6 +139,7 @@ class ComposeController
                     'label' => $a->label,
                     'email' => $a->email,
                     'provider' => $a->provider->value,
+                    'color' => AccountColor::for($a),
                 ])->values(),
         ]);
     }
