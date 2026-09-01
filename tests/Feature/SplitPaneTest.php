@@ -197,14 +197,14 @@ class SplitPaneTest extends TestCase
 
     public function test_an_unsupported_bulk_action_is_refused(): void
     {
-        // Archive and delete need provider->move(), which lands with the adapters —
-        // better a validation error than a button that silently does nothing.
+        // Archive and friends are real actions now (ThreadTriageTest covers them);
+        // a typo'd action must still be a validation error, not a silent no-op.
         Queue::fake();
         $message = $this->store($this->workspace, 'a');
 
         $this->actingAs($this->user)->post('/threads/actions', [
             'thread_ids' => [$message->thread_id],
-            'action' => 'archive',
+            'action' => 'snooze',
         ])->assertSessionHasErrors('action');
 
         Queue::assertNothingPushed();

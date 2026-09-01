@@ -2,6 +2,7 @@
 
 namespace App\Mail\Contracts;
 
+use App\Enums\MoveAction;
 use App\Mail\Data\ChangeSet;
 use App\Mail\Data\FlagChange;
 use App\Mail\Data\MessageBody;
@@ -65,4 +66,12 @@ interface MailboxProvider
 
     /** @param  list<string>  $providerMessageIds */
     public function move(MailAccount $account, array $providerMessageIds, Folder $destination): void;
+
+    /**
+     * Archive, trash, spam or restore — the triage verbs, expressed abstractly
+     * because each provider spells them differently (Gmail: label surgery).
+     *
+     * @param  list<string>  $providerMessageIds
+     */
+    public function applyMove(MailAccount $account, array $providerMessageIds, MoveAction $action): void;
 }

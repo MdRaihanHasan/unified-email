@@ -59,6 +59,18 @@ function toggleThreadStar() {
     }, { preserveScroll: true, preserveState: true })
 }
 
+// Triage from the pane header: the thread leaves the current view, so close it.
+function moveThread(action) {
+    router.post('/threads/actions', {
+        thread_ids: [thread.value.id],
+        action,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => emit('close'),
+    })
+}
+
 function toggle(id) {
     const next = new Set(expanded.value)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -163,6 +175,9 @@ function replyActions(message) {
             </div>
 
             <div class="flex shrink-0 gap-0.5">
+                <IconButton name="archive" label="Archive" :size="19" @click="moveThread('archive')" />
+                <IconButton name="trash" label="Move to trash" :size="19" @click="moveThread('trash')" />
+                <IconButton name="warn" label="Mark as spam" :size="19" @click="moveThread('spam')" />
                 <IconButton
                     name="star"
                     :label="thread.is_starred ? 'Unstar' : 'Star'"

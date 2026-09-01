@@ -3,6 +3,7 @@
 namespace App\Mail\Providers;
 
 use App\Enums\FolderRole;
+use App\Enums\MoveAction;
 use App\Mail\Contracts\MailboxProvider;
 use App\Mail\Data\ChangeSet;
 use App\Mail\Data\FlagChange;
@@ -291,6 +292,24 @@ class GmailApiProvider implements MailboxProvider
 
         // Moving out of the inbox is removing INBOX, not setting a folder field.
         $this->batchModify($account, $providerMessageIds, [$destination->remote_id], ['INBOX']);
+    }
+
+    public function applyMove(MailAccount $account, array $providerMessageIds, MoveAction $action): void
+    {
+        if ($providerMessageIds === []) {
+            return;
+        }
+
+        // Everything here is label surgery. TRASH carries Gmail's 30-day purge
+        // clock with it, exactly as trashing in Gmail's own UI does.
+        [$add, $remove] = match ($action) {
+            MoveAction::Archive => [[], ['INBOX']],
+            MoveAction::Trash => [['TRASH'], ['INBOX', 'SPAM']],
+            MoveAction::Spam => [['SPAM'], ['INBOX']],
+            MoveAction::Restore => [['INBOX'], ['TRASH', 'SPAM']],
+        };
+
+        $this->batchModify($account, $providerMessageIds, $add, $remove);
     }
 
     // ---- internals -------------------------------------------------------

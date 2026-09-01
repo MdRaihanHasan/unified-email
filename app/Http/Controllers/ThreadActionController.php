@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MoveAction;
 use App\Jobs\PushFlagsJob;
+use App\Jobs\PushMoveJob;
 use App\Mail\Data\FlagChange;
 use App\Mail\Support\MessageWriter;
 use App\Models\Message;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 /**
- * Bulk flag changes from the list's selection bar.
- *
- * Only read/unread and star/unstar for now: those go through PushFlagsJob, which
- * is implemented. Archive, delete and move need provider->move(), which lands with
- * the provider adapters — so they are deliberately absent rather than shipped as
- * buttons that fail.
+ * Bulk actions from the list's selection bar, the row hover controls, and the
+ * keyboard: read/star toggles and the triage verbs (archive, trash, spam,
+ * restore). Every one writes locally first and pushes to the provider through a
+ * job that reverts on failure, so the UI is instant and never silently wrong.
  */
 class ThreadActionController
 {
@@ -27,18 +28,14 @@ class ThreadActionController
         $data = $request->validate([
             'thread_ids' => ['required', 'array', 'min:1', 'max:200'],
             'thread_ids.*' => ['integer', 'exists:threads,id'],
-            'action' => ['required', Rule::in(['read', 'unread', 'star', 'unstar'])],
+            'action' => ['required', Rule::in([
+                'read', 'unread', 'star', 'unstar',
+                'archive', 'trash', 'spam', 'restore',
+            ])],
             // Implicit actions (opening a thread marks it read) skip the flash:
             // "Marked 1 conversation read." on every open is noise, not feedback.
             'quiet' => ['sometimes', 'boolean'],
         ]);
-
-        $change = match ($data['action']) {
-            'read' => new FlagChange(isRead: true),
-            'unread' => new FlagChange(isRead: false),
-            'star' => new FlagChange(isStarred: true),
-            'unstar' => new FlagChange(isStarred: false),
-        };
 
         $messages = Message::query()
             ->with('mailAccount')
@@ -48,6 +45,29 @@ class ThreadActionController
         if ($messages->isEmpty()) {
             return back();
         }
+
+        $move = MoveAction::tryFrom($data['action']);
+
+        $move === null
+            ? $this->applyFlags($data['action'], $messages)
+            : $this->applyMove($move, $messages);
+
+        if ($request->boolean('quiet')) {
+            return back();
+        }
+
+        return back()->with('message', $this->confirmation($data['action'], count($data['thread_ids'])));
+    }
+
+    /** @param  Collection<int, Message>  $messages */
+    private function applyFlags(string $action, Collection $messages): void
+    {
+        $change = match ($action) {
+            'read' => new FlagChange(isRead: true),
+            'unread' => new FlagChange(isRead: false),
+            'star' => new FlagChange(isStarred: true),
+            'unstar' => new FlagChange(isStarred: false),
+        };
 
         // Capture the values before the local write, so a failed push can put each
         // message back to what it actually was rather than to an assumed opposite.
@@ -76,12 +96,31 @@ class ThreadActionController
                 $previous,
             );
         }
+    }
 
-        if ($request->boolean('quiet')) {
-            return back();
+    /** @param  Collection<int, Message>  $messages */
+    private function applyMove(MoveAction $action, Collection $messages): void
+    {
+        $messages->load('folders:id');
+
+        foreach ($messages->groupBy('mail_account_id') as $group) {
+            $account = $group->first()->mailAccount;
+
+            // The pivot rows as they are now, so a refused push restores exactly
+            // what was, not an assumed inverse.
+            $previous = $group->mapWithKeys(fn (Message $m) => [
+                $m->provider_message_id => $m->folders->pluck('id')->all(),
+            ])->all();
+
+            $this->writer->applyMoveLocally($account, $group, $action);
+
+            PushMoveJob::dispatch(
+                $account,
+                $group->pluck('provider_message_id')->unique()->values()->all(),
+                $action,
+                $previous,
+            );
         }
-
-        return back()->with('message', $this->confirmation($data['action'], count($data['thread_ids'])));
     }
 
     private function confirmation(string $action, int $count): string
@@ -93,6 +132,7 @@ class ThreadActionController
             'unread' => "Marked {$count} {$noun} unread.",
             'star' => "Starred {$count} {$noun}.",
             'unstar' => "Unstarred {$count} {$noun}.",
+            default => MoveAction::from($action)->pastTense()." — {$count} {$noun}.",
         };
     }
 }

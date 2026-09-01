@@ -17,6 +17,9 @@ const groups = [
         keys: [
             ['x', 'Select / deselect'],
             ['s', 'Star'],
+            ['e', 'Archive (restore, in Trash or Spam)'],
+            ['#', 'Move to trash'],
+            ['!', 'Mark as spam'],
             ['r', 'Reply to the last message'],
             ['c', 'Compose'],
             ['Esc', 'Close, or clear the selection'],
@@ -60,8 +63,8 @@ const groups = [
             </div>
 
             <p class="border-t border-stone-200 px-4 py-2.5 text-xs text-stone-400 dark:border-stone-800">
-                Archive, delete and snooze arrive with the provider adapters — they need a real mailbox to move
-                mail in.
+                Triage applies locally first and syncs to the mailbox behind the scenes — if the
+                provider refuses, the change is put back and the accounts page says why.
             </p>
         </div>
     </div>

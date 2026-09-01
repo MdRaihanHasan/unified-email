@@ -62,6 +62,9 @@ function checkAll() {
         : new Set(rows.value.map((t) => t.id))
 }
 
+// In Trash and Spam the natural verb is the way back out, not further in.
+const isTrashLike = computed(() => ['trash', 'junk'].includes(props.filters.view))
+
 function bulk(action) {
     if (!checked.value.size) return
 
@@ -88,6 +91,15 @@ function markRead(thread, read) {
 
 function syncNow() {
     router.post('/sync', {}, { preserveScroll: true, preserveState: true })
+}
+
+// Triage on the focused thread. The row disappears from most views, so the
+// cursor stays where it is and lands on whatever slides up into the slot.
+function moveThread(thread, action) {
+    router.post('/threads/actions', {
+        thread_ids: [thread.id],
+        action,
+    }, { preserveScroll: true, preserveState: true })
 }
 
 // ---- keyboard -----------------------------------------------------------
@@ -148,6 +160,21 @@ function onKey(event) {
             if (thread) { event.preventDefault(); star(thread) }
             break
         }
+        case 'e': {
+            const thread = at()
+            if (thread) { event.preventDefault(); moveThread(thread, isTrashLike.value ? 'restore' : 'archive') }
+            break
+        }
+        case '#': {
+            const thread = at()
+            if (thread) { event.preventDefault(); moveThread(thread, 'trash') }
+            break
+        }
+        case '!': {
+            const thread = at()
+            if (thread) { event.preventDefault(); moveThread(thread, 'spam') }
+            break
+        }
         case 'c': event.preventDefault(); composing.value = true; break
         case 'r': if (props.open) { event.preventDefault(); pane.value?.replyToLast() } break
     }
@@ -194,6 +221,10 @@ const title = computed(() => {
                         <IconButton name="inbox" label="Mark unread" :size="18" @click="bulk('unread')" />
                         <IconButton name="star" label="Star" :size="18" @click="bulk('star')" />
                         <IconButton name="star" label="Unstar" :size="18" filled @click="bulk('unstar')" />
+                        <IconButton v-if="isTrashLike" name="inbox" label="Restore to inbox" :size="18" @click="bulk('restore')" />
+                        <IconButton v-else name="archive" label="Archive" :size="18" @click="bulk('archive')" />
+                        <IconButton name="trash" label="Move to trash" :size="18" @click="bulk('trash')" />
+                        <IconButton v-if="!isTrashLike" name="warn" label="Mark as spam" :size="18" @click="bulk('spam')" />
                         <span class="ml-auto text-xs font-semibold text-sky-700 dark:text-sky-300">
                             {{ checked.size }} selected
                         </span>

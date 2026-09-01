@@ -3,6 +3,7 @@
 namespace App\Mail\Support;
 
 use App\Enums\FolderRole;
+use App\Enums\MoveAction;
 use App\Mail\Data\ChangeSet;
 use App\Mail\Data\MessageUpdate;
 use App\Mail\Data\RemoteFolder;
@@ -12,6 +13,7 @@ use App\Models\MailAccount;
 use App\Models\Message;
 use App\Models\SyncFailure;
 use App\Models\Thread;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -309,6 +311,46 @@ class MessageWriter
             'has_attachments' => $messages->contains('has_attachments', true),
             'is_starred' => $messages->contains('is_starred', true),
         ]);
+    }
+
+    /**
+     * Apply a triage verb to local state, before the provider hears about it.
+     *
+     * The UI writes here first and queues a PushMoveJob, so archiving feels
+     * instant; the job reverts these pivots if the provider refuses.
+     *
+     * @param  Collection<int, Message>  $messages  all belonging to $account
+     */
+    public function applyMoveLocally(MailAccount $account, $messages, MoveAction $action): void
+    {
+        $folderId = fn (FolderRole $role): ?int => $account->folders()
+            ->where('role', $role)->value('id');
+
+        $detachIds = fn (array $roles): array => $account->folders()
+            ->whereIn('role', $roles)->pluck('id')->all();
+
+        [$attach, $detach] = match ($action) {
+            MoveAction::Archive => [null, $detachIds([FolderRole::Inbox])],
+            MoveAction::Trash => [$folderId(FolderRole::Trash), $detachIds([FolderRole::Inbox, FolderRole::Junk])],
+            MoveAction::Spam => [$folderId(FolderRole::Junk), $detachIds([FolderRole::Inbox])],
+            MoveAction::Restore => [$folderId(FolderRole::Inbox), $detachIds([FolderRole::Trash, FolderRole::Junk])],
+        };
+
+        foreach ($messages as $message) {
+            if ($detach !== []) {
+                $message->folders()->detach($detach);
+            }
+
+            // A missing destination folder (an account connected before its label
+            // list was complete) degrades to detach-only rather than failing.
+            if ($attach !== null) {
+                $message->folders()->syncWithoutDetaching([$attach]);
+            }
+        }
+
+        foreach ($messages->pluck('thread_id')->unique() as $threadId) {
+            $this->recountThread($threadId);
+        }
     }
 
     /**

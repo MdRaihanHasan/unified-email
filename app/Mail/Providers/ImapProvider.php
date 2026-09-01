@@ -2,6 +2,7 @@
 
 namespace App\Mail\Providers;
 
+use App\Enums\MoveAction;
 use App\Mail\Contracts\MailboxProvider;
 use App\Mail\Data\ChangeSet;
 use App\Mail\Data\FlagChange;
@@ -114,6 +115,11 @@ class ImapProvider implements MailboxProvider
     }
 
     public function move(MailAccount $account, array $providerMessageIds, Folder $destination): void
+    {
+        $this->pending(__FUNCTION__, 'Phase 4');
+    }
+
+    public function applyMove(MailAccount $account, array $providerMessageIds, MoveAction $action): void
     {
         $this->pending(__FUNCTION__, 'Phase 4');
     }
