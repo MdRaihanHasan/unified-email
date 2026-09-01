@@ -105,9 +105,9 @@ defineExpose({ focusSearch })
 
 <template>
     <div class="flex h-screen flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
-        <header
-            class="flex h-14 shrink-0 items-center gap-2 border-b border-stone-200 bg-white px-2 sm:gap-3 sm:px-3 dark:border-stone-800 dark:bg-stone-900"
-        >
+        <!-- The bar sits on the canvas, not in a boxed strip: the content card
+             below is the only strong surface on screen. -->
+        <header class="flex h-14 shrink-0 items-center gap-2 px-2 sm:gap-3 sm:px-3">
             <button
                 type="button"
                 class="flex size-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 md:hidden dark:text-stone-400 dark:hover:bg-stone-800"
@@ -119,11 +119,11 @@ defineExpose({ focusSearch })
 
             <Link href="/inbox" class="hidden shrink-0 items-baseline gap-1.5 pl-1.5 md:flex" style="width: 13rem">
                 <span class="text-[0.95rem] font-semibold tracking-tight">Unified</span>
-                <span class="text-[0.95rem] text-stone-400">mail</span>
+                <span class="text-[0.95rem] font-semibold text-sky-600 dark:text-sky-400">mail</span>
             </Link>
 
             <label
-                class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-stone-100 px-3.5 transition focus-within:ring-1 focus-within:ring-sky-500 sm:max-w-2xl dark:bg-stone-800"
+                class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-full border border-stone-200 bg-white px-3.5 shadow-sm transition focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-500/25 sm:max-w-2xl dark:border-stone-800 dark:bg-stone-900"
             >
                 <Icon name="search" :size="19" class="text-stone-500 dark:text-stone-400" />
                 <input
@@ -147,9 +147,7 @@ defineExpose({ focusSearch })
         </header>
 
         <div class="flex min-h-0 flex-1">
-            <aside
-                class="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-stone-200 bg-white py-3 pr-2 md:flex dark:border-stone-800 dark:bg-stone-900"
-            >
+            <aside class="hidden w-52 shrink-0 flex-col overflow-y-auto py-1 pr-2 md:flex">
                 <NavContent />
                 <div class="flex items-center gap-2 px-3 pt-3 text-xs text-stone-400">
                     <Icon name="check" :size="14" />
@@ -157,7 +155,11 @@ defineExpose({ focusSearch })
                 </div>
             </aside>
 
-            <div class="flex min-w-0 flex-1 flex-col">
+            <!-- Everything the app shows lives on this one card, floating on the
+                 canvas — the modern reading surface instead of full-bleed columns. -->
+            <div
+                class="flex min-w-0 flex-1 flex-col overflow-hidden bg-white md:mr-2 md:mb-2 md:rounded-xl md:border md:border-stone-200 md:shadow-sm dark:bg-stone-900 md:dark:border-stone-800"
+            >
                 <div
                     v-if="broken.length"
                     class="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"

@@ -48,7 +48,7 @@ function go(params) {
     <div class="flex min-h-0 flex-1 flex-col">
         <Link
             href="/compose"
-            class="mx-1 mb-3.5 flex items-center justify-center gap-2.5 rounded-full bg-stone-900 px-4 font-semibold text-white shadow-sm transition hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            class="mx-1 mb-3.5 flex items-center justify-center gap-2.5 rounded-full bg-sky-600 px-4 font-semibold text-white shadow-sm transition hover:bg-sky-500 hover:shadow-md dark:bg-sky-600 dark:hover:bg-sky-500"
             :class="[props.dense ? 'h-10 text-sm' : 'h-12 text-[0.95rem]']"
             @click="emit('navigate')"
         >

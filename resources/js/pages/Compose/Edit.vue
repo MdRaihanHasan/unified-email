@@ -253,7 +253,7 @@ function size(bytes) {
                 <button
                     type="button"
                     :disabled="form.processing"
-                    class="rounded-md bg-stone-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+                    class="rounded-md bg-sky-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
                     @click="send"
                 >
                     {{ form.processing ? 'Sending…' : 'Send' }}

@@ -30,14 +30,14 @@ const people = computed(() => {
 
 <template>
     <div
-        class="group relative flex cursor-pointer items-start gap-2.5 border-b border-l-[3px] border-stone-200 py-2 pr-2.5 transition dark:border-stone-800"
+        class="group relative flex cursor-pointer items-start gap-2.5 border-b border-l-[3px] border-stone-100 py-2.5 pr-2.5 transition dark:border-stone-800/60"
         :class="[
             props.open
-                ? 'bg-sky-50 dark:bg-sky-950/50'
+                ? 'bg-sky-50 dark:bg-sky-950/40'
                 : unread
-                  ? 'bg-white hover:bg-stone-100 dark:bg-stone-900/50 dark:hover:bg-stone-800/70'
-                  : 'hover:bg-stone-100 dark:hover:bg-stone-800/50',
-            props.cursor ? 'ring-1 ring-sky-500 ring-inset' : '',
+                  ? 'hover:bg-stone-50 dark:hover:bg-stone-800/50'
+                  : 'bg-stone-50/60 hover:bg-stone-100/80 dark:bg-stone-950/30 dark:hover:bg-stone-800/40',
+            props.cursor ? 'ring-1 ring-sky-500/70 ring-inset' : '',
         ]"
         :style="{ '--mailbox': `var(--mailbox-${props.thread.providers[0] ?? 'graph'})`, borderLeftColor: 'var(--mailbox)' }"
         role="button"
@@ -47,7 +47,7 @@ const people = computed(() => {
         <div class="flex shrink-0 items-center gap-2.5 pt-0.5 pl-2.5" @click.stop>
             <button
                 type="button"
-                class="flex size-4 shrink-0 items-center justify-center rounded-[3px] border-[1.6px] transition"
+                class="flex size-4 shrink-0 items-center justify-center rounded-[5px] border-[1.6px] transition"
                 :class="props.checked
                     ? 'border-sky-600 bg-sky-600 text-white dark:border-sky-500 dark:bg-sky-500'
                     : 'border-stone-400 dark:border-stone-500'"

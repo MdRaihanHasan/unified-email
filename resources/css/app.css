@@ -25,6 +25,47 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /*
+     * The palette, retuned in place. Components keep saying sky-* and stone-*;
+     * what those names MEAN changes here, so the whole app moves together.
+     *
+     * Accent — "iris", a modern indigo-violet, replaces default-Tailwind blue.
+     * One hue everywhere: selection, unread, focus, links, the compose button.
+     */
+    --color-sky-50: oklch(96.5% 0.018 282);
+    --color-sky-100: oklch(93.5% 0.033 282);
+    --color-sky-200: oklch(88% 0.055 282);
+    --color-sky-300: oklch(80% 0.085 282);
+    --color-sky-400: oklch(72% 0.118 282);
+    --color-sky-500: oklch(62% 0.155 282);
+    --color-sky-600: oklch(54% 0.175 282);
+    --color-sky-700: oklch(47% 0.16 282);
+    --color-sky-800: oklch(40% 0.13 282);
+    --color-sky-900: oklch(34% 0.10 282);
+    --color-sky-950: oklch(24% 0.07 282);
+
+    /*
+     * Neutrals — warmer paper in the light theme, violet-cast near-black in the
+     * dark one, instead of stock gray both ways.
+     */
+    --color-stone-50: oklch(97.8% 0.004 85);
+    --color-stone-100: oklch(95.2% 0.005 85);
+    --color-stone-200: oklch(90.5% 0.006 85);
+    --color-stone-300: oklch(84% 0.007 85);
+    --color-stone-400: oklch(68% 0.010 80);
+    --color-stone-500: oklch(54% 0.011 75);
+    --color-stone-600: oklch(43% 0.011 70);
+    --color-stone-700: oklch(36% 0.011 285);
+    --color-stone-800: oklch(28% 0.012 285);
+    --color-stone-900: oklch(21.5% 0.012 285);
+    --color-stone-950: oklch(16% 0.010 285);
+
+    /* Softer corners across the board. */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
 }
 
 /*

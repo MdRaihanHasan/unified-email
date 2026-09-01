@@ -358,7 +358,7 @@ const title = computed(() => {
              is not on screen at all. -->
         <button
             type="button"
-            class="fixed right-4 bottom-5 z-20 flex h-14 items-center gap-2.5 rounded-full bg-stone-900 px-5 font-semibold text-white shadow-lg transition hover:bg-stone-800 md:hidden dark:bg-stone-100 dark:text-stone-900"
+            class="fixed right-4 bottom-5 z-20 flex h-14 items-center gap-2.5 rounded-full bg-sky-600 px-5 font-semibold text-white shadow-lg transition hover:bg-sky-500 md:hidden"
             @click="composing = true"
         >
             <Icon name="pencil" :size="20" />

@@ -11,9 +11,9 @@ function submit() {
 <template>
     <Head title="Sign in" />
 
-    <div class="flex min-h-screen items-center justify-center px-4">
-        <div class="w-full max-w-sm">
-            <h1 class="mb-1 text-lg font-semibold tracking-tight">Unified Email</h1>
+    <div class="flex min-h-screen items-center justify-center bg-stone-50 px-4 dark:bg-stone-950">
+        <div class="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-7 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+            <h1 class="mb-1 text-lg font-semibold tracking-tight">Unified <span class="text-sky-600 dark:text-sky-400">mail</span></h1>
             <p class="mb-6 text-sm text-stone-500 dark:text-stone-400">Sign in to your mailboxes.</p>
 
             <form class="space-y-4" @submit.prevent="submit">
@@ -47,7 +47,7 @@ function submit() {
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="w-full rounded-md bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+                    class="w-full rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
                 >
                     {{ form.processing ? 'Signing in…' : 'Sign in' }}
                 </button>

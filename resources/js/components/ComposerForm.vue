@@ -255,7 +255,7 @@ const account = () => props.accounts.find((a) => a.id === form.value.mail_accoun
             <button
                 type="button"
                 :disabled="sending"
-                class="flex h-9 items-center gap-2 rounded-full bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+                class="flex h-9 items-center gap-2 rounded-full bg-sky-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
                 @click="send"
             >
                 <Icon name="send" :size="16" />

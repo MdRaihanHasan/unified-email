@@ -162,7 +162,7 @@ const statusStyles = {
                             </label>
                             <button
                                 type="submit"
-                                class="rounded-full bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white dark:bg-stone-100 dark:text-stone-900"
+                                class="rounded-full bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-500"
                             >Save</button>
                         </form>
                     </li>
@@ -176,7 +176,7 @@ const statusStyles = {
                     <a
                         v-if="props.googleConfigured"
                         href="/gmail/connect"
-                        class="mt-3 inline-flex h-10 items-center gap-2.5 rounded-full bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+                        class="mt-3 inline-flex h-10 items-center gap-2.5 rounded-full bg-sky-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 hover:shadow-md"
                     >
                         <Icon name="plus" :size="17" />
                         Connect a Gmail account

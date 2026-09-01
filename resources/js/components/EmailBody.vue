@@ -37,7 +37,7 @@ const styles = `
     ul { list-style: disc; } ol { list-style: decimal; }
     li { margin: 0.2em 0; }
     blockquote { border-left: 3px solid #d6d3d1; color: #78716c; margin: 0 0 0.85em; padding-left: 1em; }
-    a { color: #0284c7; text-decoration: underline; }
+    a { color: #5558d9; text-decoration: underline; }
     hr { border: 0; border-top: 1px solid #e7e5e4; margin: 1.5em 0; }
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
     pre { background: #f5f5f4; border-radius: 6px; overflow-x: auto; padding: 0.75em; white-space: pre-wrap; }
