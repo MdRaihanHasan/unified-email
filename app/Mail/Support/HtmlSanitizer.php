@@ -22,6 +22,13 @@ use Mews\Purifier\Facades\Purifier;
  */
 class HtmlSanitizer
 {
+    /**
+     * Cache-buster for sanitized output stored by the inbox controller. Bump it
+     * whenever CONFIG (or any transform in this class) changes, or readers keep
+     * seeing bodies cleaned by the old rules.
+     */
+    public const VERSION = 1;
+
     private const CONFIG = [
         // style is allowed almost everywhere because real email layout IS inline
         // style; CSS.AllowedProperties below decides which declarations survive

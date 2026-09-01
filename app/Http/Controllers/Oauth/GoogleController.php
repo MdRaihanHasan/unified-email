@@ -107,17 +107,25 @@ class GoogleController
         }
 
         // Reconnecting an existing mailbox replaces its credentials and clears the
-        // error, rather than creating a second copy of the same inbox.
-        return MailAccount::updateOrCreate(
-            ['email' => $email, 'provider' => Provider::GmailApi],
-            [
-                'label' => $this->label($email),
-                'display_name' => null,
-                'credentials' => ['refresh_token' => $token['refresh_token']],
-                'status' => AccountStatus::Active,
-                'last_error' => null,
-            ],
-        );
+        // error, rather than creating a second copy of the same inbox. The label
+        // and sender name are only defaulted on first connect — a reconnect must
+        // not undo what the user renamed on the accounts page.
+        $account = MailAccount::firstOrNew(['email' => $email, 'provider' => Provider::GmailApi]);
+
+        if (! $account->exists) {
+            $account->label = $this->label($email);
+        }
+
+        $account->fill([
+            'credentials' => ['refresh_token' => $token['refresh_token']],
+            'status' => AccountStatus::Active,
+            'last_error' => null,
+        ])->save();
+
+        // A cached access token from the old grant must not outlive the reconnect.
+        $this->clients->forgetToken($account);
+
+        return $account;
     }
 
     /** A readable sidebar name: "Personal" for gmail.com, otherwise the domain. */

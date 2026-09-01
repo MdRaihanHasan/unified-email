@@ -12,6 +12,7 @@ use App\Models\OutboundMessage;
 use App\Models\Thread;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,38 +66,42 @@ class InboxController
                 ->parse($filters['q'])['in'] ?? 'all';
         }
 
-        $accounts = MailAccount::query()->pluck('provider', 'id');
-        $ownAddresses = MailAccount::query()->pluck('email')
-            ->map(fn (string $email) => mb_strtolower($email))
-            ->all();
+        // A closure, so Inertia partial reloads that only ask for `open` (every
+        // thread click) skip the whole list query instead of re-running it.
+        $threads = function () use ($view, $filters) {
+            $accounts = MailAccount::query()->pluck('provider', 'id');
+            $ownAddresses = MailAccount::query()->pluck('email')
+                ->map(fn (string $email) => mb_strtolower($email))
+                ->all();
 
-        $threads = Thread::query()
-            ->inView($view)
-            ->forAccount($filters['account'] ?? null)
-            ->matching($filters['q'] ?? null)
-            ->with(['messages:id,thread_id,mail_account_id,from_addr,received_at'])
-            ->orderByDesc('last_message_at')
-            ->paginate(50)
-            ->withQueryString()
-            ->through(fn (Thread $thread) => [
-                'id' => $thread->id,
-                'subject' => $thread->subject ?: '(no subject)',
-                'snippet' => $thread->snippet,
-                // Display names, not addresses: "Anna Bergström", not "anna". The
-                // stored participants list holds addresses because thread matching
-                // compares those, so the names come from the messages themselves.
-                'participants' => $this->counterparties($thread, $ownAddresses),
-                // A merged inbox hides which mailbox a thread arrived in, so put it
-                // back. A thread stitched across accounts reports more than one.
-                'providers' => $thread->messages
-                    ->map(fn ($message) => $accounts[$message->mail_account_id]?->value)
-                    ->filter()->unique()->values(),
-                'message_count' => $thread->message_count,
-                'unread_count' => $thread->unread_count,
-                'has_attachments' => $thread->has_attachments,
-                'is_starred' => $thread->is_starred,
-                'last_message_at' => $thread->last_message_at?->toIso8601String(),
-            ]);
+            return Thread::query()
+                ->inView($view)
+                ->forAccount($filters['account'] ?? null)
+                ->matching($filters['q'] ?? null)
+                ->with(['messages:id,thread_id,mail_account_id,from_addr,received_at'])
+                ->orderByDesc('last_message_at')
+                ->paginate(50)
+                ->withQueryString()
+                ->through(fn (Thread $thread) => [
+                    'id' => $thread->id,
+                    'subject' => $thread->subject ?: '(no subject)',
+                    'snippet' => $thread->snippet,
+                    // Display names, not addresses: "Anna Bergström", not "anna". The
+                    // stored participants list holds addresses because thread matching
+                    // compares those, so the names come from the messages themselves.
+                    'participants' => $this->counterparties($thread, $ownAddresses),
+                    // A merged inbox hides which mailbox a thread arrived in, so put it
+                    // back. A thread stitched across accounts reports more than one.
+                    'providers' => $thread->messages
+                        ->map(fn ($message) => $accounts[$message->mail_account_id]?->value)
+                        ->filter()->unique()->values(),
+                    'message_count' => $thread->message_count,
+                    'unread_count' => $thread->unread_count,
+                    'has_attachments' => $thread->has_attachments,
+                    'is_starred' => $thread->is_starred,
+                    'last_message_at' => $thread->last_message_at?->toIso8601String(),
+                ]);
+        };
 
         return Inertia::render('Inbox/Index', [
             'threads' => $threads,
@@ -106,8 +111,9 @@ class InboxController
                 'q' => $filters['q'] ?? null,
                 'thread' => $selected?->id,
             ],
-            // Only the open thread's body is loaded, and only when one is open.
-            'open' => $selected === null ? null : $this->openThread($request, $selected),
+            // Only the open thread's body is loaded, and only when one is open —
+            // lazily, so list-only partial reloads never pay for sanitizing.
+            'open' => fn () => $selected === null ? null : $this->openThread($request, $selected),
         ]);
     }
 
@@ -236,9 +242,19 @@ class InboxController
      */
     private function messageCard(Message $message, $copies, ?int $showImagesFor): array
     {
-        $body = $message->body_html !== null
-            ? $this->sanitizer->sanitize($message->body_html, allowRemoteImages: $showImagesFor === $message->id)
-            : ['html' => $this->sanitizer->fromText($message->body_text), 'blocked_images' => 0];
+        // Sanitizing is the expensive step of opening a thread (HTMLPurifier per
+        // message, per open — a 100-message thread paid it 100 times every open),
+        // and the output only changes when the body or the sanitizer does.
+        $allowImages = $showImagesFor === $message->id;
+
+        $body = match (true) {
+            $message->body_html === null => ['html' => $this->sanitizer->fromText($message->body_text), 'blocked_images' => 0],
+            default => Cache::remember(
+                sprintf('sanitized:v%d:%d:%s', HtmlSanitizer::VERSION, $allowImages ? 1 : 0, md5($message->body_html)),
+                now()->addDays(7),
+                fn () => $this->sanitizer->sanitize($message->body_html, allowRemoteImages: $allowImages),
+            ),
+        };
 
         // cid: references point at inline attachments of this same message,
         // so they are safe to show without the remote-image consent step —

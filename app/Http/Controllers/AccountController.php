@@ -68,6 +68,8 @@ class AccountController
             } catch (\Throwable) {
                 // Nothing to do; the account is being removed regardless.
             }
+
+            $this->google->forgetToken($account);
         }
 
         // The rows go in a queued job: cascading a whole mailbox inside this

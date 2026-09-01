@@ -5,6 +5,7 @@ namespace App\Mail\Providers\Gmail;
 use App\Mail\Exceptions\AuthenticationFailedException;
 use App\Models\MailAccount;
 use Google\Client as GoogleClient;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The one place that knows our Google OAuth parameters.
@@ -40,16 +41,36 @@ class ClientFactory
         }
 
         $client = $this->base();
-        $token = $client->fetchAccessTokenWithRefreshToken($refreshToken);
 
-        if (isset($token['error'])) {
-            throw new AuthenticationFailedException(
-                "Google rejected the refresh token for {$account->email}: "
-                .($token['error_description'] ?? $token['error']),
-            );
+        // Access tokens live about an hour; exchanging the refresh token on every
+        // job was ~5.7k token calls a day across four accounts polled per minute.
+        // Cached with a five-minute safety margin; a token revoked mid-window
+        // surfaces as a 401 on the next API call, which is handled as auth failure.
+        $cacheKey = 'gmail-access-token:'.$account->id;
+        $token = Cache::get($cacheKey);
+
+        if ($token === null) {
+            $token = $client->fetchAccessTokenWithRefreshToken($refreshToken);
+
+            if (isset($token['error'])) {
+                throw new AuthenticationFailedException(
+                    "Google rejected the refresh token for {$account->email}: "
+                    .($token['error_description'] ?? $token['error']),
+                );
+            }
+
+            Cache::put($cacheKey, $token, max(60, (int) ($token['expires_in'] ?? 3600) - 300));
+        } else {
+            $client->setAccessToken($token);
         }
 
         return $client;
+    }
+
+    /** Drop the cached access token — on disconnect, reconnect, or removal. */
+    public function forgetToken(MailAccount $account): void
+    {
+        Cache::forget('gmail-access-token:'.$account->id);
     }
 
     public function configured(): bool

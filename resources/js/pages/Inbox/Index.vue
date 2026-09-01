@@ -35,10 +35,13 @@ watch(() => props.open?.thread.id, (id) => {
 })
 
 function openThread(thread) {
+    // Only the opened thread travels: re-running the whole list query on every
+    // open made reading cost a page load. Read-state on the row catches up via
+    // the mark-read action's own round trip.
     router.get('/inbox', { ...props.filters, thread: thread.id }, {
         preserveState: true,
         preserveScroll: true,
-        only: ['open', 'filters', 'threads', 'counts', 'flash'],
+        only: ['open', 'filters'],
     })
 }
 

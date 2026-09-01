@@ -245,4 +245,31 @@ class MessageWriterTest extends TestCase
 
         $this->assertSame(['created' => 1, 'updated' => 1, 'deleted' => 0], $applied);
     }
+
+    public function test_two_attachments_with_the_same_filename_stay_two_rows(): void
+    {
+        // Keyed on the provider's attachment id now: "image.png" twice with no
+        // content-id used to collapse into one row.
+        $message = $this->writer->store($this->account, $this->remote([
+            'attachments' => [
+                new RemoteAttachment(filename: 'image.png', remoteId: 'att-1'),
+                new RemoteAttachment(filename: 'image.png', remoteId: 'att-2'),
+            ],
+        ]));
+
+        $this->assertSame(2, $message->attachments()->count());
+    }
+
+    public function test_a_resync_prunes_attachments_the_provider_no_longer_reports(): void
+    {
+        $this->writer->store($this->account, $this->remote([
+            'attachments' => [new RemoteAttachment(filename: 'old.pdf', remoteId: 'att-1')],
+        ]));
+
+        $message = $this->writer->store($this->account, $this->remote([
+            'attachments' => [new RemoteAttachment(filename: 'new.pdf', remoteId: 'att-2')],
+        ]));
+
+        $this->assertSame(['new.pdf'], $message->attachments()->pluck('filename')->all());
+    }
 }

@@ -213,6 +213,20 @@ class GoogleConnectTest extends TestCase
         $this->assertStringNotContainsString('very-secret-token', $raw);
     }
 
+    public function test_a_reconnect_keeps_the_name_the_user_chose(): void
+    {
+        Queue::fake();
+
+        $this->completeExchange('me@bixcel.com.au', 'refresh-1');
+        MailAccount::sole()->update(['label' => 'My HQ', 'display_name' => 'Raihan']);
+
+        $this->completeExchange('me@bixcel.com.au', 'refresh-2');
+
+        $account = MailAccount::sole();
+        $this->assertSame('My HQ', $account->label, 'a reconnect must not undo a rename');
+        $this->assertSame('Raihan', $account->display_name);
+    }
+
     /**
      * Run the callback with a token response and a resolved mailbox address.
      *

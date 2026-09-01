@@ -236,23 +236,34 @@ class MessageWriter
     private function syncAttachments(Message $message, RemoteMessage $remote): void
     {
         if ($remote->attachments === []) {
+            // A resync reporting no attachments means the message has none;
+            // stale rows from an earlier parse would list files that are gone.
+            $message->attachments()->delete();
+
             return;
         }
 
+        $kept = [];
+
         foreach ($remote->attachments as $attachment) {
-            $message->attachments()->updateOrCreate(
-                [
-                    'filename' => $attachment->filename,
-                    'content_id' => $attachment->contentId,
-                ],
-                [
-                    'remote_id' => $attachment->remoteId,
-                    'mime_type' => $attachment->mimeType,
-                    'size_bytes' => $attachment->sizeBytes,
-                    'is_inline' => $attachment->isInline,
-                ],
-            );
+            // Keyed on the provider's own attachment id, which is unique per
+            // message — two files both named image.png with no content-id used to
+            // collapse into one row. Filename is only the last-resort key.
+            $key = $attachment->remoteId !== null
+                ? ['remote_id' => $attachment->remoteId]
+                : ['filename' => $attachment->filename, 'content_id' => $attachment->contentId];
+
+            $kept[] = $message->attachments()->updateOrCreate($key, [
+                'remote_id' => $attachment->remoteId,
+                'filename' => $attachment->filename,
+                'content_id' => $attachment->contentId,
+                'mime_type' => $attachment->mimeType,
+                'size_bytes' => $attachment->sizeBytes,
+                'is_inline' => $attachment->isInline,
+            ])->id;
         }
+
+        $message->attachments()->whereNotIn('id', $kept)->delete();
     }
 
     /**
