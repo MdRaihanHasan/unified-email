@@ -21,6 +21,8 @@ const views = computed(() => [
     { key: 'starred', label: 'Starred', icon: 'star', count: counts.value.starred },
     { key: 'sent', label: 'Sent', icon: 'send', count: null },
     { key: 'all', label: 'All mail', icon: 'archive', count: null },
+    { key: 'junk', label: 'Spam', icon: 'warn', count: null },
+    { key: 'trash', label: 'Trash', icon: 'trash', count: null },
 ])
 
 // A send must never be invisible: the Outbox badge is the constant reminder

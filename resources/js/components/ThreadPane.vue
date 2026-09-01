@@ -28,7 +28,11 @@ const expanded = ref(new Set())
 watch(
     () => thread.value.id,
     () => {
-        const last = messages.value[messages.value.length - 1]
+        // Trashed/spam messages stay collapsed behind their label — auto-expanding
+        // a deleted message on open would be the opposite of deleting it.
+        const visible = messages.value.filter((message) => !message.hidden_reason)
+        const pool = visible.length ? visible : messages.value
+        const last = pool[pool.length - 1]
         expanded.value = new Set(last ? [last.id] : [])
         replyTo.value = null
 
@@ -202,7 +206,21 @@ function replyActions(message) {
                 class="border-b border-stone-200 last:border-b-0 dark:border-stone-800"
             >
                 <button
-                    v-if="!expanded.has(message.id)"
+                    v-if="!expanded.has(message.id) && message.hidden_reason"
+                    type="button"
+                    class="flex w-full items-center gap-2.5 px-4 py-2 text-left transition hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                    @click="toggle(message.id)"
+                >
+                    <Icon :name="message.hidden_reason === 'trash' ? 'trash' : 'warn'" :size="14" class="ml-1.5 shrink-0 text-stone-400" />
+                    <span class="min-w-0 flex-1 truncate text-xs text-stone-400 italic">
+                        {{ message.hidden_reason === 'trash' ? 'Deleted message' : 'Marked as spam' }}
+                        — {{ name(message.from) }} · show
+                    </span>
+                    <RelativeTime :value="message.received_at" class="shrink-0 text-xs text-stone-400" />
+                </button>
+
+                <button
+                    v-else-if="!expanded.has(message.id)"
                     type="button"
                     class="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition hover:bg-stone-50 dark:hover:bg-stone-800/50"
                     @click="toggle(message.id)"

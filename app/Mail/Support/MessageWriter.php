@@ -270,13 +270,19 @@ class MessageWriter
 
         $messages = $thread->messages()
             ->orderBy('received_at')
-            ->get(['subject', 'snippet', 'from_addr', 'to_addrs', 'cc_addrs', 'received_at', 'sent_at', 'is_read', 'is_starred', 'has_attachments']);
+            ->get(['id', 'subject', 'snippet', 'from_addr', 'to_addrs', 'cc_addrs', 'received_at', 'sent_at', 'is_read', 'is_starred', 'has_attachments']);
 
         if ($messages->isEmpty()) {
             $thread->delete();
 
             return;
         }
+
+        // Spam and trash are imported (so their views work and a restore syncs
+        // back), but an unread junk message must not light up the Unread count —
+        // "Unread 1,025" full of spam is a number the user learns to ignore.
+        $junked = $this->junkedMessageIds($messages->pluck('id')->all());
+        $countable = $messages->reject(fn (Message $message) => in_array($message->id, $junked, true));
 
         $latest = $messages->last();
         $participants = [];
@@ -299,10 +305,28 @@ class MessageWriter
             'first_message_at' => $messages->first()->received_at ?? $messages->first()->sent_at,
             'last_message_at' => $latest->received_at ?? $latest->sent_at,
             'message_count' => $messages->count(),
-            'unread_count' => $messages->where('is_read', false)->count(),
+            'unread_count' => $countable->where('is_read', false)->count(),
             'has_attachments' => $messages->contains('has_attachments', true),
             'is_starred' => $messages->contains('is_starred', true),
         ]);
+    }
+
+    /**
+     * Ids of the given messages that live in a Trash or Junk folder.
+     *
+     * @param  list<int>  $messageIds
+     * @return list<int>
+     */
+    private function junkedMessageIds(array $messageIds): array
+    {
+        return DB::table('message_folders')
+            ->join('folders', 'folders.id', '=', 'message_folders.folder_id')
+            ->whereIn('message_folders.message_id', $messageIds)
+            ->whereIn('folders.role', [FolderRole::Trash->value, FolderRole::Junk->value])
+            ->pluck('message_folders.message_id')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

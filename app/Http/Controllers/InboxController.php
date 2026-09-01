@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FolderRole;
 use App\Enums\OutboundStatus;
 use App\Mail\Support\HtmlSanitizer;
 use App\Models\MailAccount;
@@ -28,7 +29,7 @@ class InboxController
     {
         $filters = $request->validate([
             'account' => ['nullable', 'integer', 'exists:mail_accounts,id'],
-            'view' => ['nullable', 'in:inbox,unread,starred,sent,all'],
+            'view' => ['nullable', 'in:inbox,unread,starred,sent,junk,trash,all'],
             'q' => ['nullable', 'string', 'max:200'],
             'thread' => ['nullable', 'integer', 'exists:threads,id'],
         ]);
@@ -43,7 +44,7 @@ class InboxController
     {
         $filters = $request->validate([
             'account' => ['nullable', 'integer', 'exists:mail_accounts,id'],
-            'view' => ['nullable', 'in:inbox,unread,starred,sent,all'],
+            'view' => ['nullable', 'in:inbox,unread,starred,sent,junk,trash,all'],
             'q' => ['nullable', 'string', 'max:200'],
         ]);
 
@@ -157,6 +158,7 @@ class InboxController
             'messages' => fn ($query) => $query->orderBy('received_at'),
             'messages.attachments',
             'messages.mailAccount',
+            'messages.folders',
         ]);
 
         return [
@@ -190,8 +192,17 @@ class InboxController
                     }
                 }
 
+                // A trashed or junked message still renders inside its thread, but
+                // collapsed and labeled — Gmail's "deleted messages" toggle.
+                $hiddenReason = match (true) {
+                    $message->folders->contains(fn ($f) => $f->role === FolderRole::Trash) => 'trash',
+                    $message->folders->contains(fn ($f) => $f->role === FolderRole::Junk) => 'junk',
+                    default => null,
+                };
+
                 return [
                     'id' => $message->id,
+                    'hidden_reason' => $hiddenReason,
                     'account' => [
                         'id' => $message->mailAccount->id,
                         'label' => $message->mailAccount->label,

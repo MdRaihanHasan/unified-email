@@ -136,7 +136,7 @@ class SyncStatusTest extends TestCase
 
         $progress = $account->importProgress();
 
-        $this->assertSame(2, $progress['folders_total'], 'inbox and sent; trash, spam and a flag label are skipped');
+        $this->assertSame(4, $progress['folders_total'], 'trash and spam are walked now; only the flag label is skipped');
         $this->assertSame(1, $progress['folders_done']);
         $this->assertSame(0, $progress['messages']);
     }

@@ -42,6 +42,13 @@ class Thread extends Model
             'starred' => $query->where('is_starred', true),
             'inbox' => $query->whereHas('messages.folders', fn (Builder $q) => $q->where('role', FolderRole::Inbox)),
             'sent' => $query->whereHas('messages.folders', fn (Builder $q) => $q->where('role', FolderRole::Sent)),
+            'junk' => $query->whereHas('messages.folders', fn (Builder $q) => $q->where('role', FolderRole::Junk)),
+            'trash' => $query->whereHas('messages.folders', fn (Builder $q) => $q->where('role', FolderRole::Trash)),
+            // "All mail" matches Gmail's: everything except what lives only in
+            // Trash or Spam. A message with no folders at all (archived) counts.
+            'all' => $query->whereHas('messages', fn (Builder $q) => $q
+                ->whereDoesntHave('folders', fn (Builder $f) => $f
+                    ->whereIn('role', [FolderRole::Trash, FolderRole::Junk]))),
             default => $query,
         };
     }

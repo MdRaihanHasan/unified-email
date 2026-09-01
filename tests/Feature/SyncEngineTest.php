@@ -215,12 +215,14 @@ class SyncEngineTest extends TestCase
             '[Gmail]/Trash' => [new MessagePage([$this->remote('trash')])],
         ];
 
-        // Inbox page, then the completion pass.
+        // Inbox page, trash page (trash IS walked now, so its view is complete),
+        // then the completion pass. All Mail alone stays skipped.
+        $this->runJob(new BackfillJob($this->account));
         $this->runJob(new BackfillJob($this->account));
         $this->runJob(new BackfillJob($this->account));
 
         $this->assertSame(3, Folder::count(), 'all folders are still recorded');
-        $this->assertSame(['a'], Message::pluck('provider_message_id')->all());
+        $this->assertEqualsCanonicalizing(['a', 'trash'], Message::pluck('provider_message_id')->all());
         $this->assertNotNull($this->account->fresh()->backfill_done_at);
     }
 
