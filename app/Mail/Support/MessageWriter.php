@@ -10,6 +10,7 @@ use App\Mail\Data\RemoteMessage;
 use App\Models\Folder;
 use App\Models\MailAccount;
 use App\Models\Message;
+use App\Models\SyncFailure;
 use App\Models\Thread;
 use Illuminate\Support\Facades\DB;
 
@@ -36,7 +37,17 @@ class MessageWriter
         $touchedThreads = [];
 
         foreach ($changes->created as $remote) {
-            $message = $this->store($account, $remote, recount: false);
+            // A message the writer cannot store is quarantined, not fatal: the one
+            // thing incremental sync must never do is stop syncing everything else
+            // because one message is malformed.
+            try {
+                $message = $this->store($account, $remote, recount: false);
+            } catch (\Throwable $e) {
+                SyncFailure::record($account, $remote->providerMessageId, $e);
+
+                continue;
+            }
+
             $touchedThreads[$message->thread_id] = true;
             $created++;
         }

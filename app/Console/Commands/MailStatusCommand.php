@@ -61,6 +61,14 @@ class MailStatusCommand extends Command
             $this->line('    last error      <fg=red>'.$account->last_error.'</>');
         }
 
+        // Quarantined messages are silent data loss unless someone is told.
+        $quarantined = $account->syncFailures()->count();
+
+        if ($quarantined > 0) {
+            $this->line("    quarantined     <fg=red>{$quarantined} message(s) failed to store</>"
+                .'  <fg=gray>select * from sync_failures</>');
+        }
+
         // The one diagnosis worth spelling out, because nothing else reveals it.
         if ($account->importStalled()) {
             $this->newLine();

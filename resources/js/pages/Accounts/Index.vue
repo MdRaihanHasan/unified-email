@@ -49,6 +49,11 @@ const statusStyles = {
                             <p v-if="account.last_error" class="mt-1 text-xs text-red-600 dark:text-red-400">
                                 {{ account.last_error }}
                             </p>
+                            <p v-if="account.sync_failures" class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                {{ account.sync_failures }} message{{ account.sync_failures === 1 ? '' : 's' }}
+                                could not be imported — quarantined, not lost. Check
+                                <code>php artisan mail:status</code>.
+                            </p>
                         </div>
 
                         <div class="shrink-0 text-right">

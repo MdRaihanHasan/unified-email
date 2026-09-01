@@ -156,7 +156,7 @@ class MessageParser
         }
 
         if ($parts === []) {
-            $decoded = $this->decode($body?->getData());
+            $decoded = $this->toUtf8($this->decode($body?->getData()), $this->charsetOf($part));
 
             return match (true) {
                 $mime === 'text/html' => [$decoded, null, []],
@@ -218,6 +218,48 @@ class MessageParser
         $decoded = base64_decode(strtr($data, '-_', '+/'), false);
 
         return $decoded === false ? null : $decoded;
+    }
+
+    /** The charset= parameter of this part's own Content-Type header, if declared. */
+    private function charsetOf(MessagePart $part): ?string
+    {
+        foreach ($part->getHeaders() ?? [] as $header) {
+            if (strtolower($header->getName()) === 'content-type'
+                && preg_match('/charset\s*=\s*"?([\w.:-]+)"?/i', $header->getValue(), $match)) {
+                return $match[1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Body bytes arrive in whatever charset the sender used — Gmail hands back the
+     * original part verbatim. Postgres rejects invalid UTF-8 outright, and one
+     * rejected row used to wedge an entire account's backfill, so every body is
+     * converted (or, failing that, scrubbed) before it can reach a query.
+     */
+    private function toUtf8(?string $value, ?string $charset): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $charset = strtoupper($charset ?? 'UTF-8');
+
+        if (! in_array($charset, ['UTF-8', 'US-ASCII', 'ASCII'], true)) {
+            try {
+                $converted = @mb_convert_encoding($value, 'UTF-8', $charset);
+
+                if (is_string($converted)) {
+                    $value = $converted;
+                }
+            } catch (\ValueError) {
+                // An unknown charset label: fall through to the scrub below.
+            }
+        }
+
+        return mb_check_encoding($value, 'UTF-8') ? $value : mb_scrub($value, 'UTF-8');
     }
 
     private function snippet(GmailMessage $message): ?string

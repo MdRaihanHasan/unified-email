@@ -48,6 +48,11 @@ class MailAccount extends Model
         return $this->hasMany(OutboundMessage::class);
     }
 
+    public function syncFailures(): HasMany
+    {
+        return $this->hasMany(SyncFailure::class);
+    }
+
     public function inbox(): ?Folder
     {
         return $this->folders()->where('role', FolderRole::Inbox)->first();

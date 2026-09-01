@@ -27,6 +27,7 @@ class HandleInertiaRequests extends Middleware
             // IDLE daemon, a rotated app password — so "last synced" belongs in front
             // of the user rather than only in a log.
             'accounts' => fn () => $request->user() === null ? [] : MailAccount::query()
+                ->withCount('syncFailures')
                 ->orderBy('id')
                 ->get()
                 ->map(fn (MailAccount $account) => [
@@ -47,6 +48,9 @@ class HandleInertiaRequests extends Middleware
                     // pointless once the mailbox is filled.
                     'import_progress' => $account->hasFinishedBackfill() ? null : $account->importProgress(),
                     'last_error' => $account->last_error,
+                    // Messages the sync could not store. Quarantine without a
+                    // visible count is silent data loss with extra steps.
+                    'sync_failures' => $account->sync_failures_count,
                 ])->values(),
 
             // The sidebar shows these on every screen, so they are computed lazily

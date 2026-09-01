@@ -9,6 +9,7 @@ use App\Mail\Exceptions\AuthenticationFailedException;
 use App\Mail\Support\MessageWriter;
 use App\Models\Folder;
 use App\Models\MailAccount;
+use App\Models\SyncFailure;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
@@ -98,8 +99,29 @@ class BackfillJob implements ShouldQueue
 
         $page = $driver->fetchPage($account, $folder, $folder->backfill_cursor);
 
+        // One poisoned message must not wedge the account: quarantine it and keep
+        // walking. A page where EVERY message fails is not poison but something
+        // systemic (database down, schema drift), so that still throws and retries.
+        $failed = 0;
+        $lastFailure = null;
+
         foreach ($page->messages as $remote) {
-            $writer->store($account, $remote, recount: false);
+            try {
+                $writer->store($account, $remote, recount: false);
+            } catch (\Throwable $e) {
+                SyncFailure::record($account, $remote->providerMessageId, $e);
+                Log::warning('Message quarantined during backfill', [
+                    'account' => $account->email,
+                    'message' => $remote->providerMessageId,
+                    'error' => $e->getMessage(),
+                ]);
+                $failed++;
+                $lastFailure = $e;
+            }
+        }
+
+        if ($failed > 1 && $failed === count($page->messages)) {
+            throw $lastFailure;
         }
 
         foreach ($this->threadIds($page->messages, $account) as $threadId) {

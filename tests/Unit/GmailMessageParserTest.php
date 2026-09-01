@@ -331,4 +331,65 @@ class GmailMessageParserTest extends TestCase
 
         $this->assertSame('চালান ৪২ — ধন্যবাদ', $remote->subject);
     }
+
+    public function test_a_windows_1252_body_converts_to_utf8(): void
+    {
+        // "it’s café" with the curly quote and é as windows-1252 single bytes —
+        // invalid UTF-8, and what most Outlook corporate mail actually sends.
+        $body = "it\x92s caf\xe9";
+
+        $remote = $this->parser->parse($this->message([
+            'payload' => [
+                'mimeType' => 'text/plain',
+                'headers' => $this->headers([
+                    'From' => 'legacy@corp.test',
+                    'Content-Type' => 'text/plain; charset=windows-1252',
+                ]),
+                'body' => ['data' => $this->encode($body), 'size' => strlen($body)],
+            ],
+        ]));
+
+        $this->assertSame('it’s café', $remote->bodyText);
+        $this->assertTrue(mb_check_encoding($remote->bodyText, 'UTF-8'));
+    }
+
+    public function test_a_body_with_a_lying_or_missing_charset_is_scrubbed_not_stored_raw(): void
+    {
+        // Invalid UTF-8 bytes, no charset declared: conversion cannot help, so the
+        // bytes are scrubbed. Postgres rejects invalid UTF-8 outright, and one such
+        // message used to wedge its whole account's backfill.
+        $body = "broken \xC3\x28 bytes";
+
+        $remote = $this->parser->parse($this->message([
+            'payload' => [
+                'mimeType' => 'text/plain',
+                'body' => ['data' => $this->encode($body), 'size' => strlen($body)],
+            ],
+        ]));
+
+        $this->assertTrue(mb_check_encoding($remote->bodyText, 'UTF-8'));
+        $this->assertStringContainsString('broken', $remote->bodyText);
+        $this->assertStringContainsString('bytes', $remote->bodyText);
+    }
+
+    public function test_an_iso_8859_1_html_part_inside_a_multipart_tree_converts(): void
+    {
+        $html = "<p>r\xe9sum\xe9</p>";
+
+        $remote = $this->parser->parse($this->message([
+            'payload' => [
+                'mimeType' => 'multipart/alternative',
+                'body' => ['data' => null],
+                'parts' => [
+                    [
+                        'mimeType' => 'text/html',
+                        'headers' => $this->headers(['Content-Type' => 'text/html; charset="ISO-8859-1"']),
+                        'body' => ['data' => $this->encode($html), 'size' => strlen($html)],
+                    ],
+                ],
+            ],
+        ]));
+
+        $this->assertSame('<p>résumé</p>', $remote->bodyHtml);
+    }
 }
