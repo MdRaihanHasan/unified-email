@@ -177,6 +177,19 @@ class InboxController
                     ? $this->sanitizer->sanitize($message->body_html, allowRemoteImages: $showImagesFor === $message->id)
                     : ['html' => $this->sanitizer->fromText($message->body_text), 'blocked_images' => 0];
 
+                // cid: references point at inline attachments of this same message,
+                // so they are safe to show without the remote-image consent step —
+                // rewrite them to the attachment endpoint, which streams and caches.
+                foreach ($message->attachments as $attachment) {
+                    if ($attachment->content_id !== null) {
+                        $body['html'] = str_ireplace(
+                            'cid:'.$attachment->content_id,
+                            route('messages.attachments.show', [$message, $attachment]),
+                            $body['html'],
+                        );
+                    }
+                }
+
                 return [
                     'id' => $message->id,
                     'account' => [
@@ -203,6 +216,7 @@ class InboxController
                             'filename' => $attachment->filename,
                             'mime_type' => $attachment->mime_type,
                             'size_bytes' => $attachment->size_bytes,
+                            'url' => route('messages.attachments.show', [$message, $attachment], false),
                         ])->values(),
                 ];
             })->values(),

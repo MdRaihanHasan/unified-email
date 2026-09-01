@@ -279,14 +279,15 @@ function replyActions(message) {
                         </p>
 
                         <ul v-if="message.attachments.length" class="mt-4 flex flex-wrap gap-2">
-                            <li
-                                v-for="attachment in message.attachments"
-                                :key="attachment.id"
-                                class="flex items-center gap-2 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs dark:border-stone-800 dark:bg-stone-800/60"
-                            >
-                                <Icon name="clip" :size="14" class="text-stone-400" />
-                                <span class="font-medium">{{ attachment.filename }}</span>
-                                <span class="text-stone-400">{{ size(attachment.size_bytes) }}</span>
+                            <li v-for="attachment in message.attachments" :key="attachment.id">
+                                <a
+                                    :href="attachment.url"
+                                    class="flex items-center gap-2 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs transition hover:border-stone-300 hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-800/60 dark:hover:border-stone-700 dark:hover:bg-stone-800"
+                                >
+                                    <Icon name="clip" :size="14" class="text-stone-400" />
+                                    <span class="font-medium">{{ attachment.filename }}</span>
+                                    <span class="text-stone-400">{{ size(attachment.size_bytes) }}</span>
+                                </a>
                             </li>
                         </ul>
 

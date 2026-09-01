@@ -96,7 +96,14 @@ class HtmlSanitizer
 
         $clean = $this->restoreContentIds(Purifier::clean($this->parkContentIds($html), self::CONFIG));
 
-        return $clean === '' ? '' : $this->stripRemoteImages($clean);
+        // cid: images are stripped from quotes too — MimeBuilder does not re-attach
+        // the referenced parts, so the recipient's copy would show broken images.
+        return $clean === '' ? '' : $this->stripCidImages($this->stripRemoteImages($clean));
+    }
+
+    private function stripCidImages(string $html): string
+    {
+        return preg_replace('/<img\b[^>]*\bsrc\s*=\s*["\']cid:[^"\']*["\'][^>]*\/?>/i', '', $html) ?? $html;
     }
 
     /** Plain-text fallback for messages that carry no HTML part. */

@@ -14,8 +14,8 @@ use App\Mail\Data\SyncCursor;
 use App\Mail\Exceptions\CursorInvalidException;
 use App\Models\Folder;
 use App\Models\MailAccount;
+use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\StreamInterface;
-use RuntimeException;
 
 /**
  * In-memory MailboxProvider, so the sync pipeline can be exercised end to end
@@ -42,6 +42,9 @@ class FakeProvider implements MailboxProvider
 
     /** @var list<OutboundDraft> */
     public array $sent = [];
+
+    /** Remote ids handed to downloadAttachment, so a test can count provider hits. */
+    public array $downloadedAttachments = [];
 
     public ?\Throwable $flagFailure = null;
 
@@ -101,7 +104,9 @@ class FakeProvider implements MailboxProvider
 
     public function downloadAttachment(MailAccount $account, string $providerMessageId, string $attachmentRemoteId): StreamInterface
     {
-        throw new RuntimeException('Not used in tests.');
+        $this->downloadedAttachments[] = $attachmentRemoteId;
+
+        return Utils::streamFor('fake-bytes-of-'.$attachmentRemoteId);
     }
 
     public function send(MailAccount $account, OutboundDraft $draft): SendResult

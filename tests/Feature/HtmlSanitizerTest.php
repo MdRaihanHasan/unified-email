@@ -144,7 +144,9 @@ class HtmlSanitizerTest extends TestCase
 
         $this->assertStringNotContainsString('tracker.test', $html);
         $this->assertStringNotContainsString('data-blocked-src', $html);
-        $this->assertStringContainsString('cid:logo', $html, 'inline attachments still belong in the quote');
+        // cid images used to be kept here, but MimeBuilder never re-attaches the
+        // parts they reference, so keeping the tag mailed broken images onward.
+        $this->assertStringNotContainsString('cid:logo', $html);
         $this->assertStringContainsString('Hi', $html);
     }
 
@@ -157,6 +159,18 @@ class HtmlSanitizerTest extends TestCase
         );
 
         $this->assertStringNotContainsString('<img', $html);
+    }
+
+    public function test_quoting_strips_cid_images_because_the_parts_are_not_reattached(): void
+    {
+        // MimeBuilder does not attach the parts a cid: reference points at, so
+        // leaving the tag in would mail broken images to the recipient.
+        $html = $this->sanitizer->sanitizeForQuoting(
+            '<p>Regards</p><img src="cid:logo@signature" alt="logo">',
+        );
+
+        $this->assertStringNotContainsString('cid:', $html);
+        $this->assertStringContainsString('Regards', $html);
     }
 
     public function test_quoting_still_removes_scripts(): void

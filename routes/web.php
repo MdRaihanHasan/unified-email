@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ComposeController;
 use App\Http\Controllers\InboxController;
@@ -23,6 +24,8 @@ Route::middleware('auth')->group(function () {
     Route::get('threads/{thread}', [InboxController::class, 'show'])->name('threads.show');
 
     Route::patch('messages/{message}/flags', [MessageFlagController::class, 'update'])->name('messages.flags');
+    Route::get('messages/{message}/attachments/{attachment}', [AttachmentController::class, 'show'])
+        ->scopeBindings()->name('messages.attachments.show');
     Route::post('threads/actions', [ThreadActionController::class, 'update'])->name('threads.actions');
 
     // Throttled: the button is a reassurance lever, not a way to hammer Gmail.
