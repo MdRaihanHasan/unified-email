@@ -162,6 +162,7 @@ function size(bytes) {
     <Head :title="heading" />
 
     <AppLayout>
+        <div class="min-h-0 flex-1 overflow-y-auto bg-white md:mt-2.5 md:rounded-xl md:border md:border-stone-200 md:shadow-sm dark:bg-stone-900 md:dark:border-stone-800">
         <div class="mx-auto max-w-3xl px-4 py-5">
             <div class="mb-3 flex items-baseline justify-between">
                 <h1 class="text-base font-semibold tracking-tight">{{ heading }}</h1>
@@ -281,6 +282,7 @@ function size(bytes) {
                     Discard
                 </button>
             </div>
+        </div>
         </div>
     </AppLayout>
 </template>

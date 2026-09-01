@@ -48,18 +48,21 @@
     --color-sky-950: #1e1b4b;
 
     /*
-     * Neutrals — cool gray for the light theme, slate for the dark one:
-     * bg #F9FAFB / panel white / border #E5E7EB in light;
-     * bg #0F172A / panel #1E293B / border #334155 in dark.
+     * Neutrals — slate in BOTH themes now, so light and dark read as one
+     * product (the light design spec): canvas #F1F5F9 / white cards /
+     * #E2E8F0 borders in light; bg #0F172A / panel #1E293B / border #334155
+     * in dark. The top steps are shifted one notch so the dark theme's
+     * stock class usage (bg-stone-950 canvas, bg-stone-900 panel,
+     * border-stone-800) lands exactly on the spec's values.
      */
-    --color-stone-50: #f9fafb;
-    --color-stone-100: #f3f4f6;
-    --color-stone-200: #e5e7eb;
-    --color-stone-300: #d1d5db;
-    --color-stone-400: #9ca3af;
-    --color-stone-500: #6b7280;
-    --color-stone-600: #4b5563;
-    --color-stone-700: #475569;
+    --color-stone-50: #f8fafc;
+    --color-stone-100: #f1f5f9;
+    --color-stone-200: #e2e8f0;
+    --color-stone-300: #cbd5e1;
+    --color-stone-400: #94a3b8;
+    --color-stone-500: #64748b;
+    --color-stone-600: #475569;
+    --color-stone-700: #3e4c63;
     --color-stone-800: #334155;
     --color-stone-900: #1e293b;
     --color-stone-950: #0f172a;

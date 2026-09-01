@@ -65,7 +65,7 @@ const statusStyles = {
     <Head title="Accounts" />
 
     <AppLayout>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto bg-white md:mt-2.5 md:rounded-xl md:border md:border-stone-200 md:shadow-sm dark:bg-stone-900 md:dark:border-stone-800">
             <div class="mx-auto max-w-2xl px-4 py-6">
                 <h1 class="text-base font-semibold tracking-tight">Mailboxes</h1>
 

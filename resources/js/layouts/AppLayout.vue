@@ -104,10 +104,10 @@ defineExpose({ focusSearch })
 </script>
 
 <template>
-    <div class="flex h-screen flex-col overflow-hidden bg-stone-50 dark:bg-stone-950">
-        <!-- The bar sits on the canvas, not in a boxed strip: the content card
-             below is the only strong surface on screen. -->
-        <header class="flex h-14 shrink-0 items-center gap-2 px-2 sm:gap-3 sm:px-3">
+    <div class="flex h-screen flex-col overflow-hidden bg-stone-100 dark:bg-stone-950">
+        <header
+            class="flex h-14 shrink-0 items-center gap-2 border-b border-stone-200 bg-white px-2 sm:gap-3 sm:px-3 dark:border-stone-800 dark:bg-stone-900"
+        >
             <button
                 type="button"
                 class="flex size-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 md:hidden dark:text-stone-400 dark:hover:bg-stone-800"
@@ -123,7 +123,7 @@ defineExpose({ focusSearch })
             </Link>
 
             <label
-                class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-full border border-stone-200 bg-white px-3.5 shadow-sm transition focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-500/25 sm:max-w-2xl dark:border-stone-800 dark:bg-stone-900"
+                class="flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-lg bg-stone-100 px-3.5 transition focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/40 sm:max-w-md dark:bg-stone-950 dark:focus-within:bg-stone-950"
             >
                 <Icon name="search" :size="19" class="text-stone-500 dark:text-stone-400" />
                 <input
@@ -147,7 +147,7 @@ defineExpose({ focusSearch })
         </header>
 
         <div class="flex min-h-0 flex-1">
-            <aside class="hidden w-52 shrink-0 flex-col overflow-y-auto py-1 pr-2 md:flex">
+            <aside class="hidden w-52 shrink-0 flex-col overflow-y-auto py-2.5 pr-2 md:flex">
                 <NavContent />
                 <div class="flex items-center gap-2 px-3 pt-3 text-xs text-stone-400">
                     <Icon name="check" :size="14" />
@@ -155,14 +155,12 @@ defineExpose({ focusSearch })
                 </div>
             </aside>
 
-            <!-- Everything the app shows lives on this one card, floating on the
-                 canvas — the modern reading surface instead of full-bleed columns. -->
-            <div
-                class="flex min-w-0 flex-1 flex-col overflow-hidden bg-white md:mr-2 md:mb-2 md:rounded-xl md:border md:border-stone-200 md:shadow-sm dark:bg-stone-900 md:dark:border-stone-800"
-            >
+            <!-- Content floats on the tinted canvas; the pages inside draw their
+                 own white cards (list, reading pane) — depth without heavy borders. -->
+            <div class="flex min-w-0 flex-1 flex-col overflow-hidden md:pr-2.5 md:pb-2.5">
                 <div
                     v-if="broken.length"
-                    class="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+                    class="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 md:mt-2.5 md:rounded-lg md:border dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
                 >
                     <span class="font-medium">Reconnect needed.</span>
                     {{ broken.map((a) => a.email).join(', ') }} rejected our credentials — a revoked token, or
@@ -171,7 +169,7 @@ defineExpose({ focusSearch })
 
                 <div
                     v-else-if="stale.length"
-                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 md:mt-2.5 md:rounded-lg md:border dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
                 >
                     <span class="font-medium">Sync is behind.</span>
                     <span v-for="account in stale" :key="account.id" class="ml-1">
@@ -183,7 +181,7 @@ defineExpose({ focusSearch })
                      mailbox that looks connected and never fills. -->
                 <div
                     v-if="stalled.length"
-                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                    class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 md:mt-2.5 md:rounded-lg md:border dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
                 >
                     <span class="font-medium">Import has not started</span>
                     for {{ stalled.map((a) => a.email).join(', ') }}. The job is queued but nothing is
@@ -193,7 +191,7 @@ defineExpose({ focusSearch })
 
                 <div
                     v-else-if="backfilling.length"
-                    class="shrink-0 border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
+                    class="shrink-0 border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800 md:mt-2.5 md:rounded-lg md:border dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
                 >
                     <span v-for="account in backfilling" :key="account.id" class="mr-3">
                         Importing {{ account.email }}
@@ -208,7 +206,7 @@ defineExpose({ focusSearch })
 
                 <div
                     v-if="flash && flash !== dismissed"
-                    class="flex shrink-0 items-center gap-2 border-b border-stone-200 bg-stone-100 px-4 py-2 text-sm dark:border-stone-800 dark:bg-stone-800"
+                    class="flex shrink-0 items-center gap-2 border-b border-stone-200 bg-white px-4 py-2 text-sm shadow-sm md:mt-2.5 md:rounded-lg md:border dark:border-stone-800 dark:bg-stone-900"
                 >
                     <span>{{ flash }}</span>
                     <button

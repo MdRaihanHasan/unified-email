@@ -140,7 +140,7 @@ function replyActions(message) {
 </script>
 
 <template>
-    <section class="flex min-h-0 flex-1 flex-col bg-white dark:bg-stone-900">
+    <section class="flex min-h-0 flex-1 flex-col overflow-hidden bg-white md:mt-2.5 md:rounded-xl md:border md:border-stone-200 md:shadow-sm dark:bg-stone-900 md:dark:border-stone-800">
         <header class="flex shrink-0 items-start gap-2.5 border-b border-stone-200 px-4 py-3 dark:border-stone-800">
             <button
                 type="button"

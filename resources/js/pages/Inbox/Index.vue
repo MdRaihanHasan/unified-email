@@ -228,7 +228,7 @@ const title = computed(() => {
         <div class="flex min-h-0 flex-1">
             <!-- On a phone the list gives way to the thread rather than sitting beside it. -->
             <section
-                class="min-h-0 min-w-0 flex-col border-r border-stone-200 lg:flex lg:w-[27rem] lg:shrink-0 dark:border-stone-800"
+                class="min-h-0 min-w-0 flex-col overflow-hidden bg-white md:mt-2.5 md:rounded-xl md:border md:border-stone-200 md:shadow-sm lg:flex lg:w-[27rem] lg:shrink-0 lg:mr-2.5 dark:bg-stone-900 md:dark:border-stone-800"
                 :class="props.open ? 'hidden' : 'flex flex-1'"
             >
                 <div
@@ -275,7 +275,7 @@ const title = computed(() => {
                     <div v-for="(thread, index) in rows" :id="`thread-${thread.id}`" :key="thread.id">
                         <div
                             v-if="dayLabel(thread, rows[index - 1])"
-                            class="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 px-4 py-1 text-[0.65rem] font-semibold tracking-wider text-stone-400 uppercase backdrop-blur dark:border-stone-800 dark:bg-stone-950/95"
+                            class="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 px-4 py-1 text-[0.65rem] font-semibold tracking-wider text-stone-400 uppercase backdrop-blur dark:border-stone-800 dark:bg-stone-900/95"
                         >
                             {{ dayLabel(thread, rows[index - 1]) }}
                         </div>
@@ -340,7 +340,10 @@ const title = computed(() => {
 
             <ThreadPane v-if="props.open" ref="pane" :open="props.open" @close="closeThread" />
 
-            <section v-else class="hidden min-h-0 flex-1 items-center justify-center lg:flex">
+            <section
+                v-else
+                class="hidden min-h-0 flex-1 items-center justify-center bg-white md:mt-2.5 md:rounded-xl md:border md:border-stone-200 md:shadow-sm lg:flex dark:bg-stone-900 md:dark:border-stone-800"
+            >
                 <div class="max-w-xs text-center">
                     <p class="text-sm text-stone-400">Pick a conversation to read it here.</p>
                     <button

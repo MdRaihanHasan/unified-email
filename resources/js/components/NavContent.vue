@@ -60,7 +60,7 @@ function go(params) {
     <div class="flex min-h-0 flex-1 flex-col">
         <Link
             href="/compose"
-            class="mx-1 mb-3.5 flex items-center justify-center gap-2.5 rounded-full bg-sky-600 px-4 font-semibold text-white shadow-sm transition hover:bg-sky-500 hover:shadow-md dark:bg-sky-600 dark:hover:bg-sky-500"
+            class="mx-1 mb-3.5 flex items-center justify-center gap-2.5 rounded-lg bg-sky-600 px-4 font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,.4),0_2px_6px_rgba(79,70,229,.25)] transition hover:bg-sky-500"
             :class="[props.dense ? 'h-10 text-sm' : 'h-12 text-[0.95rem]']"
             @click="emit('navigate')"
         >
@@ -73,12 +73,12 @@ function go(params) {
                 v-for="view in views"
                 :key="view.key"
                 type="button"
-                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+                class="mr-1 flex w-full items-center gap-3 rounded-lg pr-3 pl-2.5 text-left transition"
                 :class="[
                     rowHeight, textSize,
                     filters.view === view.key
                         ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                        : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+                        : 'text-stone-600 hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70',
                 ]"
                 @click="go({ view: view.key })"
             >
@@ -89,7 +89,7 @@ function go(params) {
 
             <Link
                 href="/outbox"
-                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                class="mr-1 flex w-full items-center gap-3 rounded-lg pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70"
                 :class="[rowHeight, textSize]"
                 @click="emit('navigate')"
             >
@@ -111,12 +111,12 @@ function go(params) {
 
         <button
             type="button"
-            class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+            class="mr-1 flex w-full items-center gap-3 rounded-lg pr-3 pl-2.5 text-left transition"
             :class="[
                 rowHeight, textSize,
                 !filters.account
                     ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+                    : 'text-stone-600 hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70',
             ]"
             @click="go({ account: undefined })"
         >
@@ -128,12 +128,12 @@ function go(params) {
             v-for="account in accounts"
             :key="account.id"
             type="button"
-            class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left transition"
+            class="mr-1 flex w-full items-center gap-3 rounded-lg pr-3 pl-2.5 text-left transition"
             :class="[
                 rowHeight, textSize,
                 filters.account === account.id
                     ? 'bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70',
+                    : 'text-stone-600 hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70',
             ]"
             @click="go({ account: account.id })"
         >
@@ -152,7 +152,7 @@ function go(params) {
             <div class="mx-3 mb-2 h-px bg-stone-200 dark:bg-stone-800" />
             <Link
                 href="/accounts"
-                class="flex items-center gap-3 rounded-r-full pr-3 pl-2.5 text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                class="mr-1 flex items-center gap-3 rounded-lg pr-3 pl-2.5 text-stone-600 transition hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70"
                 :class="[rowHeight, textSize]"
                 @click="emit('navigate')"
             >
@@ -163,7 +163,7 @@ function go(params) {
                 href="/logout"
                 method="post"
                 as="button"
-                class="flex w-full items-center gap-3 rounded-r-full pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800/70"
+                class="mr-1 flex w-full items-center gap-3 rounded-lg pr-3 pl-2.5 text-left text-stone-600 transition hover:bg-white/80 dark:text-stone-400 dark:hover:bg-stone-800/70"
                 :class="[rowHeight, textSize]"
             >
                 <Icon name="close" :size="props.dense ? 18 : 20" />
