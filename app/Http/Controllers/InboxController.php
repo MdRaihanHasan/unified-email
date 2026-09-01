@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\FolderRole;
 use App\Enums\OutboundStatus;
 use App\Mail\Support\HtmlSanitizer;
+use App\Mail\Support\SearchQueryParser;
 use App\Models\MailAccount;
 use App\Models\Message;
 use App\Models\OutboundMessage;
@@ -54,6 +55,14 @@ class InboxController
     private function render(Request $request, array $filters, ?Thread $selected): Response
     {
         $view = $filters['view'] ?? 'inbox';
+
+        // The search box says "all mailboxes" — make that true. A search covers
+        // everything except Trash/Spam (Gmail's default), whatever view is open;
+        // in:trash / in:spam / in:inbox narrows it explicitly.
+        if (filled($filters['q'] ?? null)) {
+            $view = app(SearchQueryParser::class)
+                ->parse($filters['q'])['in'] ?? 'all';
+        }
 
         $accounts = MailAccount::query()->pluck('provider', 'id');
         $ownAddresses = MailAccount::query()->pluck('email')
