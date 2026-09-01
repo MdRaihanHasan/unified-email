@@ -88,12 +88,16 @@ services:
       PGDATABASE: ${DB_DATABASE}
     volumes:
       - ./backups:/backups
-    command: >
-      sh -c 'while true; do
-        pg_dump | gzip > /backups/unified_email_$$(date -u +%Y%m%d_%H%M).sql.gz
-        && ls -1t /backups/unified_email_*.sql.gz | tail -n +15 | xargs -r rm --;
-        sleep 86400;
-      done'
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          if pg_dump | gzip > "/backups/unified_email_$$(date -u +%Y%m%d_%H%M).sql.gz"; then
+            ls -1t /backups/unified_email_*.sql.gz | tail -n +15 | xargs -r rm --
+          fi
+          sleep 86400
+        done
 
   # Only for a plain IMAP mailbox. Gmail does not need it — it is polled through
   # the API — so this stays behind a profile:
