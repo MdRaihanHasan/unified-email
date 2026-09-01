@@ -31,3 +31,4 @@ Thumbs.db
 /.design/preview-*.html
 /.design/*-redesign.html
 /.design/__pycache__
+backups/

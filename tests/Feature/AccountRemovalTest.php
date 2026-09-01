@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
+use App\Jobs\RemoveAccountJob;
 use App\Mail\Data\Address;
 use App\Mail\Data\RemoteMessage;
 use App\Mail\Support\MessageWriter;
@@ -11,6 +13,7 @@ use App\Models\Message;
 use App\Models\Thread;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AccountRemovalTest extends TestCase
@@ -94,5 +97,63 @@ class AccountRemovalTest extends TestCase
         $this->delete("/accounts/{$account->id}")->assertRedirect('/login');
 
         $this->assertDatabaseHas('mail_accounts', ['id' => $account->id]);
+    }
+
+    public function test_removal_is_queued_and_the_account_reads_as_removing_meanwhile(): void
+    {
+        Queue::fake();
+
+        $account = $this->account();
+        $this->writer->store($account, $this->remote('m1'));
+
+        $this->actingAs(User::factory()->create())->delete("/accounts/{$account->id}");
+
+        // The request only marks and dispatches; the rows go in the job.
+        $account->refresh();
+        $this->assertNotNull($account->removal_requested_at);
+        $this->assertSame('disabled', $account->status->value);
+        $this->assertSame(1, Message::count());
+        Queue::assertPushed(RemoveAccountJob::class);
+    }
+
+    // ---- editing (F-25) -----------------------------------------------------
+
+    public function test_label_sender_name_and_signature_are_editable(): void
+    {
+        $account = $this->account();
+
+        $this->actingAs(User::factory()->create())->patch("/accounts/{$account->id}", [
+            'label' => 'Bixcel HQ',
+            'display_name' => 'Raihan at Bixcel',
+            'signature_html' => '<p>— Raihan</p>',
+        ])->assertRedirect();
+
+        $account->refresh();
+        $this->assertSame('Bixcel HQ', $account->label);
+        $this->assertSame('Raihan at Bixcel', $account->display_name);
+        $this->assertSame('<p>— Raihan</p>', $account->signature_html);
+    }
+
+    public function test_pause_and_resume_toggle_sync_eligibility(): void
+    {
+        $account = $this->account();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->patch("/accounts/{$account->id}", ['paused' => true]);
+        $this->assertFalse($account->fresh()->status->shouldSync());
+
+        $this->actingAs($user)->patch("/accounts/{$account->id}", ['paused' => false]);
+        $this->assertTrue($account->fresh()->status->shouldSync());
+    }
+
+    public function test_pausing_does_not_paper_over_an_auth_error(): void
+    {
+        $account = $this->account();
+        $account->update(['status' => AccountStatus::AuthError]);
+
+        $this->actingAs(User::factory()->create())
+            ->patch("/accounts/{$account->id}", ['paused' => false]);
+
+        $this->assertSame('auth_error', $account->fresh()->status->value);
     }
 }

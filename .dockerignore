@@ -8,6 +8,7 @@ vendor
 # Deployment-local bind mounts (pgdata is owned by the postgres uid and
 # unreadable by the build context sender).
 data
+backups
 
 # Built in the assets stage; a stale host copy must not win.
 public/build

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AccountStatus;
 use App\Enums\Provider;
+use App\Jobs\RemoveAccountJob;
 use App\Mail\Providers\Gmail\ClientFactory;
-use App\Mail\Support\MessageWriter;
 use App\Models\MailAccount;
-use App\Models\Thread;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,21 +30,33 @@ class AccountController
         ]);
     }
 
-    public function destroy(MailAccount $account, MessageWriter $writer): RedirectResponse
+    /** Rename, sender identity, signature, and the pause toggle. */
+    public function update(Request $request, MailAccount $account): RedirectResponse
     {
-        // Captured before the delete: the cascade takes the message rows with it,
-        // and afterwards there is nothing left to say which threads were touched.
-        $threadIds = $account->messages()->distinct()->pluck('thread_id');
+        $data = $request->validate([
+            'label' => ['sometimes', 'string', 'max:60'],
+            'display_name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'signature_html' => ['sometimes', 'nullable', 'string', 'max:10000'],
+            'paused' => ['sometimes', 'boolean'],
+        ]);
 
-        // Staged compose attachments live on disk, outside the database cascade.
-        foreach ($account->outboundMessages()->whereNotNull('attachments')->pluck('attachments') as $staged) {
-            foreach ($staged ?? [] as $attachment) {
-                if (! empty($attachment['path'])) {
-                    Storage::disk('local')->delete($attachment['path']);
-                }
+        if (array_key_exists('paused', $data)) {
+            // Pausing only makes sense from a working state; an auth_error account
+            // stays an auth_error account until it is reconnected.
+            if (in_array($account->status, [AccountStatus::Active, AccountStatus::Disabled], true)) {
+                $account->status = $data['paused'] ? AccountStatus::Disabled : AccountStatus::Active;
             }
+
+            unset($data['paused']);
         }
 
+        $account->fill($data)->save();
+
+        return back()->with('message', "{$account->email} updated.");
+    }
+
+    public function destroy(MailAccount $account): RedirectResponse
+    {
         // Best-effort: tell Google the grant is dead so it does not linger on the
         // user's third-party-access page. A failure here (token already revoked,
         // network down) must not block the removal — the rows go either way.
@@ -58,18 +70,17 @@ class AccountController
             }
         }
 
-        // Folders, messages, attachments and pivots cascade in the database, and
-        // any queued job for this account discards itself when the model is gone.
-        $account->delete();
+        // The rows go in a queued job: cascading a whole mailbox inside this
+        // request is a timeout with partial cleanup on any real account. Disabled
+        // stops the sync immediately; the stamp lets the UI say "removing…".
+        $account->update([
+            'status' => AccountStatus::Disabled,
+            'removal_requested_at' => now(),
+        ]);
 
-        // Threads whose only messages were this account's are now empty; ones
-        // shared with another mailbox (an RFC-header merge) survive and need
-        // their derived counters redone.
-        $threadIds->chunk(1000)->each(function ($chunk) use ($writer) {
-            Thread::whereIn('id', $chunk)->whereDoesntHave('messages')->delete();
-            Thread::whereIn('id', $chunk)->pluck('id')->each(fn (int $id) => $writer->recountThread($id));
-        });
+        RemoveAccountJob::dispatch($account);
 
-        return redirect()->route('accounts')->with('message', "{$account->email} removed.");
+        return redirect()->route('accounts')
+            ->with('message', "Removing {$account->email} — its mail disappears as the cleanup runs.");
     }
 }

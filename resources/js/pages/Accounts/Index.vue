@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '../../layouts/AppLayout.vue'
 import Avatar from '../../components/Avatar.vue'
@@ -23,6 +23,36 @@ function removeAccount(account) {
     }
 }
 
+// One inline editor at a time; the form is seeded from the account being opened.
+const editing = ref(null)
+const form = reactive({ label: '', display_name: '', signature_html: '' })
+
+function edit(account) {
+    if (editing.value === account.id) {
+        editing.value = null
+
+        return
+    }
+
+    editing.value = account.id
+    form.label = account.label ?? ''
+    form.display_name = account.display_name ?? ''
+    form.signature_html = account.signature_html ?? ''
+}
+
+function save(account) {
+    router.patch(`/accounts/${account.id}`, { ...form }, {
+        preserveScroll: true,
+        onSuccess: () => (editing.value = null),
+    })
+}
+
+function togglePause(account) {
+    router.patch(`/accounts/${account.id}`, { paused: account.status !== 'disabled' }, {
+        preserveScroll: true,
+    })
+}
+
 const statusStyles = {
     active: 'text-emerald-600 dark:text-emerald-400',
     connecting: 'text-sky-600 dark:text-sky-400',
@@ -40,7 +70,7 @@ const statusStyles = {
                 <h1 class="text-base font-semibold tracking-tight">Mailboxes</h1>
 
                 <ul v-if="accounts.length" class="mt-4 divide-y divide-stone-200 dark:divide-stone-800">
-                    <li v-for="account in accounts" :key="account.id" class="flex items-start gap-3 py-3">
+                    <li v-for="account in accounts" :key="account.id" class="flex flex-wrap items-start gap-3 py-3">
                         <Avatar :name="account.label" :provider="account.provider" :size="32" />
 
                         <div class="min-w-0 flex-1">
@@ -63,7 +93,10 @@ const statusStyles = {
                             <p class="text-xs text-stone-400">
                                 synced {{ account.last_synced_for_humans ?? 'never' }}
                             </p>
-                            <div class="mt-0.5 flex items-center justify-end gap-3">
+                            <div v-if="account.removing" class="mt-0.5 text-xs text-stone-400 italic">
+                                Removing…
+                            </div>
+                            <div v-else class="mt-0.5 flex items-center justify-end gap-3">
                                 <a
                                     v-if="account.status === 'auth_error'"
                                     href="/gmail/connect"
@@ -71,11 +104,60 @@ const statusStyles = {
                                 >Reconnect</a>
                                 <button
                                     type="button"
+                                    class="text-xs font-semibold text-sky-600 hover:underline dark:text-sky-400"
+                                    @click="edit(account)"
+                                >{{ editing === account.id ? 'Close' : 'Edit' }}</button>
+                                <button
+                                    v-if="account.status === 'active' || account.status === 'disabled'"
+                                    type="button"
+                                    class="text-xs font-semibold text-stone-500 hover:underline dark:text-stone-400"
+                                    @click="togglePause(account)"
+                                >{{ account.status === 'disabled' ? 'Resume' : 'Pause' }}</button>
+                                <button
+                                    type="button"
                                     class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
                                     @click="removeAccount(account)"
                                 >Remove</button>
                             </div>
                         </div>
+
+                        <form
+                            v-if="editing === account.id"
+                            class="mt-2 w-full space-y-2 rounded-md border border-stone-200 p-3 dark:border-stone-800"
+                            @submit.prevent="save(account)"
+                        >
+                            <label class="block text-xs">
+                                <span class="text-stone-400">Sidebar name</span>
+                                <input
+                                    v-model="form.label"
+                                    type="text"
+                                    maxlength="60"
+                                    class="mt-1 w-full rounded-md border border-stone-200 bg-transparent px-2 py-1.5 text-sm dark:border-stone-700"
+                                >
+                            </label>
+                            <label class="block text-xs">
+                                <span class="text-stone-400">Sender name — what recipients see instead of a bare address</span>
+                                <input
+                                    v-model="form.display_name"
+                                    type="text"
+                                    maxlength="120"
+                                    class="mt-1 w-full rounded-md border border-stone-200 bg-transparent px-2 py-1.5 text-sm dark:border-stone-700"
+                                >
+                            </label>
+                            <label class="block text-xs">
+                                <span class="text-stone-400">Signature (HTML) — appended to outgoing mail</span>
+                                <textarea
+                                    v-model="form.signature_html"
+                                    rows="3"
+                                    maxlength="10000"
+                                    class="mt-1 w-full rounded-md border border-stone-200 bg-transparent px-2 py-1.5 font-mono text-xs dark:border-stone-700"
+                                />
+                            </label>
+                            <button
+                                type="submit"
+                                class="rounded-full bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white dark:bg-stone-100 dark:text-stone-900"
+                            >Save</button>
+                        </form>
                     </li>
                 </ul>
 

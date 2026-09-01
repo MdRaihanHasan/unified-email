@@ -51,6 +51,9 @@ class HandleInertiaRequests extends Middleware
                     // Messages the sync could not store. Quarantine without a
                     // visible count is silent data loss with extra steps.
                     'sync_failures' => $account->sync_failures_count,
+                    'display_name' => $account->display_name,
+                    'signature_html' => $account->signature_html,
+                    'removing' => $account->removal_requested_at !== null,
                 ])->values(),
 
             // The sidebar shows these on every screen, so they are computed lazily

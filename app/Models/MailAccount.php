@@ -30,6 +30,7 @@ class MailAccount extends Model
             'sync_cursor' => 'array',
             'backfill_done_at' => 'datetime',
             'last_synced_at' => 'datetime',
+            'removal_requested_at' => 'datetime',
         ];
     }
 

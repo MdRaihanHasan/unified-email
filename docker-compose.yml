@@ -70,6 +70,31 @@ services:
     healthcheck:
       disable: true
 
+  # Nightly pg_dump into ./backups, newest 14 kept. It runs from the postgres
+  # image so the client always matches the server version. Postgres is the
+  # source of truth for every connected mailbox — before this, one disk
+  # incident was the whole archive. Copying the dumps off this host is still
+  # the operator's job, as is backing up APP_KEY (losing it means reconnecting
+  # every mailbox: the refresh tokens are encrypted with it).
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${DB_USERNAME}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_DATABASE}
+    volumes:
+      - ./backups:/backups
+    command: >
+      sh -c 'while true; do
+        pg_dump | gzip > /backups/unified_email_$$(date -u +%Y%m%d_%H%M).sql.gz
+        && ls -1t /backups/unified_email_*.sql.gz | tail -n +15 | xargs -r rm --;
+        sleep 86400;
+      done'
+
   # Only for a plain IMAP mailbox. Gmail does not need it — it is polled through
   # the API — so this stays behind a profile:
   #     docker compose --profile idle up -d

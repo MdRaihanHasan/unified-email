@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('compose/{outbound}', [ComposeController::class, 'destroy'])->name('compose.destroy');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts');
+    Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
     // The callback path must match the redirect URI registered in Google Cloud
