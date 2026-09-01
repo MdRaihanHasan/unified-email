@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Mail\Contracts\MailboxProvider;
 use App\Mail\Data\RemoteMessage;
 use App\Mail\Exceptions\AuthenticationFailedException;
+use App\Mail\Exceptions\RateLimitedException;
 use App\Mail\Support\MessageWriter;
 use App\Models\Folder;
 use App\Models\MailAccount;
@@ -54,6 +55,12 @@ class BackfillJob implements ShouldQueue
 
         try {
             $this->walk($account, $driver, $writer);
+        } catch (RateLimitedException $e) {
+            // "Slow down" is not a failure: re-dispatch the same walk later rather
+            // than burning one of the five retries on a certainty.
+            Log::info('Rate limited, rescheduling backfill', ['account' => $account->email]);
+
+            self::dispatch($account)->delay(now()->addSeconds($e->retryAfterSeconds ?? 60));
         } catch (AuthenticationFailedException $e) {
             // Same rule as incremental sync: a revoked token or rotated app password
             // cannot be retried into working, and a backfill that dies silently

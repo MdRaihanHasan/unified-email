@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Mail\Data\SyncCursor;
 use App\Mail\Exceptions\AuthenticationFailedException;
 use App\Mail\Exceptions\CursorInvalidException;
+use App\Mail\Exceptions\RateLimitedException;
 use App\Mail\Support\MessageWriter;
 use App\Models\MailAccount;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -90,6 +91,14 @@ class SyncAccountJob implements ShouldQueue
             $this->fail($e);
 
             return;
+        } catch (RateLimitedException $e) {
+            // Not a failure, an instruction: come back later. Failing here would
+            // burn a retry on something guaranteed to pass.
+            Log::info('Rate limited, rescheduling sync', ['account' => $account->email]);
+
+            static::dispatch($account)->delay(now()->addSeconds($e->retryAfterSeconds ?? 60));
+
+            return;
         }
 
         $applied = $writer->applyChangeSet($account, $changes);
@@ -104,6 +113,13 @@ class SyncAccountJob implements ShouldQueue
 
         if (! $changes->isEmpty()) {
             Log::info('Synced account', ['account' => $account->email, ...$applied]);
+        }
+
+        // A bulk change in Gmail (select all → mark read) spans more history than
+        // one bounded pass. This batch is stored and its cursor committed, so the
+        // next job simply continues from there — same shape as backfill pages.
+        if ($changes->hasMore) {
+            static::dispatch($account);
         }
     }
 }

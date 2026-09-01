@@ -16,11 +16,13 @@ use App\Mail\Data\SendResult;
 use App\Mail\Data\SyncCursor;
 use App\Mail\Exceptions\AuthenticationFailedException;
 use App\Mail\Exceptions\CursorInvalidException;
+use App\Mail\Exceptions\RateLimitedException;
 use App\Mail\Providers\Gmail\ClientFactory;
 use App\Mail\Providers\Gmail\MessageParser;
 use App\Mail\Support\MimeBuilder;
 use App\Models\Folder;
 use App\Models\MailAccount;
+use App\Models\Message;
 use Closure;
 use Google\Service\Exception as GoogleException;
 use Google\Service\Gmail;
@@ -45,6 +47,9 @@ use Psr\Http\Message\StreamInterface;
  */
 class GmailApiProvider implements MailboxProvider
 {
+    /** History pages consumed per sync pass before handing back with hasMore. */
+    private const MAX_HISTORY_PAGES = 10;
+
     /** Gmail's own label ids for the places mail actually lives. */
     private const ROLES = [
         'INBOX' => FolderRole::Inbox,
@@ -130,7 +135,12 @@ class GmailApiProvider implements MailboxProvider
         $touched = [];
         $latest = (string) $startHistoryId;
         $pageToken = null;
+        $pages = 0;
 
+        // Bounded, not drained: "select all → mark read" in Gmail produces more
+        // history than one pass should hold in memory or one job should own.
+        // Every entry id is itself a valid history cursor, so stopping early is
+        // safe — the caller commits this batch and asks again from $latest.
         do {
             $response = $this->history($account, (string) $startHistoryId, $pageToken);
 
@@ -152,15 +162,29 @@ class GmailApiProvider implements MailboxProvider
                 foreach ([...($entry->getLabelsAdded() ?? []), ...($entry->getLabelsRemoved() ?? [])] as $change) {
                     $touched[$change->getMessage()->getId()] = true;
                 }
+
+                $latest = (string) ($entry->getId() ?: $latest);
             }
 
-            $latest = $response->getHistoryId() ?: $latest;
             $pageToken = $response->getNextPageToken() ?: null;
-        } while ($pageToken !== null);
+
+            if ($pageToken === null) {
+                $latest = (string) ($response->getHistoryId() ?: $latest);
+            }
+        } while ($pageToken !== null && ++$pages < self::MAX_HISTORY_PAGES);
+
+        // Flag updates only matter for messages we hold: history also reports mail
+        // outside the backfill window, and one GET per untracked id is how a bulk
+        // Gmail cleanup used to turn into thousands of pointless API calls.
+        $known = Message::query()
+            ->where('mail_account_id', $account->id)
+            ->whereIn('provider_message_id', array_keys($touched))
+            ->pluck('provider_message_id')
+            ->all();
 
         $updates = [];
 
-        foreach (array_keys($touched) as $id) {
+        foreach ($known as $id) {
             // A message deleted in the same batch cannot be read back.
             if (isset($created[$id]) || in_array($id, $deleted, true)) {
                 continue;
@@ -178,6 +202,7 @@ class GmailApiProvider implements MailboxProvider
             updated: $updates,
             deletedIds: array_values(array_unique($deleted)),
             cursor: new SyncCursor(['historyId' => $latest]),
+            hasMore: $pageToken !== null,
         );
     }
 
@@ -375,6 +400,12 @@ class GmailApiProvider implements MailboxProvider
         // Neither can be retried into working, so they must not look like a blip.
         if ($e->getCode() === 401 || str_contains($e->getMessage(), 'invalid_grant')) {
             return new AuthenticationFailedException("Google rejected our credentials{$where}.", 0, $e);
+        }
+
+        // 429, and Gmail's 403-shaped quota variants, mean "slow down", not
+        // "broken" — retried blind they burn more quota and fail the same way.
+        if ($e->getCode() === 429 || ($e->getCode() === 403 && preg_match('/rate ?limit|quota/i', $e->getMessage()))) {
+            return new RateLimitedException("Google is rate limiting us{$where}.", previous: $e);
         }
 
         return $e;
